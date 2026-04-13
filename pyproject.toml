@@ -5,7 +5,22 @@ description = "A small Python library and CLI tool for coercing environment vari
 readme = "README.md"
 authors = [{ name = "Kyle O'Malley", email = "j.kyle.omalley@gmail.com" }]
 requires-python = ">=3.11"
-dependencies = []
+license = "MIT"
+dependencies = [
+    "platformdirs>=4.9.6",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+
+[project.scripts]
+envbool = "envbool.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.11.0,<0.12.0"]
@@ -13,6 +28,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "pre-commit>=4.5.1",
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
     "ruff>=0.15.10",
