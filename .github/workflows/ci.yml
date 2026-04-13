@@ -33,4 +33,4 @@ jobs:
         run: uv run ty check src/
 
       - name: Test
-        run: uv run pytest --cov=envbool
+        run: uv run pytest
