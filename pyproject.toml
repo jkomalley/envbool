@@ -1,0 +1,98 @@
+[project]
+name = "envbool"
+version = "0.1.0"
+description = "A small Python library and CLI tool for coercing environment variables (and arbitrary strings) into boolean values."
+readme = "README.md"
+authors = [{ name = "Kyle O'Malley", email = "j.kyle.omalley@gmail.com" }]
+requires-python = ">=3.11"
+dependencies = []
+
+[build-system]
+requires = ["uv_build>=0.11.0,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.15.10",
+    "ty>=0.0.29",
+]
+
+# --------------------------------------------------------------------------- #
+# Ruff
+# --------------------------------------------------------------------------- #
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    # --- Formatting / style clashes ---
+    "D203",   # one-blank-line-before-class (conflicts with D211)
+    "D213",   # multi-line-summary-second-line (conflicts with D212)
+    "D100",   # missing docstring in public module
+    "D104",   # missing docstring in public package
+    "D107",   # missing docstring in __init__ method
+
+    # --- Overly pedantic / noisy ---
+    "ANN401", # dynamically typed expressions (typing.Any) disallowed
+    "COM812", # missing trailing comma (conflicts with formatter)
+    "ISC001", # single-line implicit string concatenation (conflicts with formatter)
+    "FIX002", # line contains TODO
+    "TD002",  # missing author in TODO
+    "TD003",  # missing issue link in TODO
+    "ERA001", # found commented-out code
+    "TRY003", # avoid specifying long messages outside the exception class
+    "EM101",  # exception must not use a string literal
+    "EM102",  # exception must not use an f-string literal
+
+    # --- Pragmatic ignores ---
+    "S101",   # use of assert (needed in tests, fine in internal code)
+    "PLR2004",# magic value used in comparison
+    "CPY001", # missing copyright notice
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "D",      # no docstring requirements in tests
+    "ANN",    # no type annotation requirements in tests
+    "SLF001", # allow access to private members in tests
+]
+
+# --------------------------------------------------------------------------- #
+# ty
+# --------------------------------------------------------------------------- #
+[tool.ty.rules]
+possibly-missing-import = "warn"
+
+# --------------------------------------------------------------------------- #
+# Pytest
+# --------------------------------------------------------------------------- #
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+]
+
+# --------------------------------------------------------------------------- #
+# Coverage
+# --------------------------------------------------------------------------- #
+[tool.coverage.run]
+source = ["envbool"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.",
+]
