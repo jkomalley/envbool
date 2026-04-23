@@ -67,6 +67,7 @@ ignore = [
     # --- Pragmatic ignores ---
     "S101",   # use of assert (needed in tests, fine in internal code)
     "PLR2004",# magic value used in comparison
+    "PLR0913",# too many arguments — envbool API is intentionally keyword-heavy
     "CPY001", # missing copyright notice
 ]
 
