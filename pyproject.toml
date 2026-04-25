@@ -80,6 +80,9 @@ convention = "google"
     "ANN",    # no type annotation requirements in tests
     "SLF001", # allow access to private members in tests
 ]
+"src/envbool/_cli.py" = [
+    "T201",   # print() is the primary output mechanism for CLI
+]
 
 # --------------------------------------------------------------------------- #
 # ty

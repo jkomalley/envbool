@@ -1,21 +1,18 @@
 """Pure string-to-bool coercion with configurable truthy/falsy sets.
 
-This module is the lowest layer of envbool. It has no knowledge of os.environ --
-that lives in env.py. It does consult the config cache (_get_config) so that
-strict=None/warn=None defer to the loaded config file rather than always
-defaulting to False.
-
-Import order is important: config.py imports _defaults (not core), so core.py
-can safely import from config.py without a circular dependency.
-
 Public surface:
     DEFAULT_TRUTHY  -- the built-in truthy set (from _defaults)
     DEFAULT_FALSY   -- the built-in falsy set (from _defaults)
     to_bool()       -- coerce a single string to bool
 
-Private surface (used by env.py and tests):
+Private surface (used by _env.py and tests):
     _resolve()      -- compute effective truthy/falsy sets from layered inputs
 """
+# This module has no knowledge of os.environ -- that lives in _env.py. It does
+# consult the config cache (_get_config) so that strict=None/warn=None defer to
+# the loaded config file rather than always defaulting to False.
+# Import order matters: _config.py imports _defaults (not _core), so _core.py
+# can safely import from _config.py without creating a circular dependency.
 
 __all__ = ["to_bool"]
 

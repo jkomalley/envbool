@@ -26,11 +26,10 @@ class InvalidBoolValueError(EnvBoolError, ValueError):
 
     Dual inheritance lets existing except ValueError handlers keep working
     after a codebase adopts envbool, with no migration required.
-
-    Attributes are set by the raising code (to_bool / envbool) after
-    construction rather than in __init__, keeping the signature simple and
-    avoiding issues with pickling or subclassing.
     """
+
+    # Attributes are set by the raising code after construction rather than in
+    # __init__ to keep the signature simple and avoid pickling/subclassing issues.
 
     # Name of the environment variable, if the error originated from envbool().
     # None when raised directly from to_bool() with no env var context.

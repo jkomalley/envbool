@@ -5,8 +5,8 @@ Discovery priority (first found wins):
      in pyproject.toml. Walk stops at boundary markers or pyproject.toml.
   2. User-level: <platformdirs.user_config_dir("envbool")>/config.toml
 
-The loaded config is cached for the lifetime of the process (double-checked
-locking for thread safety). Call _reset_config() in test fixtures to clear it.
+The config is loaded once and cached for the lifetime of the process (thread-safe).
+Call _reset_config() in test fixtures to clear it.
 
 Public surface:
     EnvBoolConfig   -- frozen dataclass with resolved settings
@@ -63,12 +63,9 @@ class EnvBoolConfig:
 
 
 class _ConfigCache:
-    """Mutable wrapper for the process-level config singleton.
-
-    A class attribute instead of a bare module-level variable avoids the need
-    for 'global' statements when updating the cached value. The lock lives here
-    too so all cache state travels together.
-    """
+    # A class attribute instead of a bare module-level variable avoids the need
+    # for 'global' statements when updating the cached value. The lock lives here
+    # so all cache state travels together.
 
     config: EnvBoolConfig | None = None
     lock: threading.Lock = threading.Lock()
@@ -93,12 +90,9 @@ def load_config() -> EnvBoolConfig:
 
 
 def _get_config() -> EnvBoolConfig:
-    """Internal cached accessor with double-checked locking.
-
-    The outer check avoids lock contention on the hot path (all calls after first
-    load). The inner check prevents duplicate disk I/O if two threads race on the
-    very first call.
-    """
+    # Double-checked locking: the outer check avoids lock contention on the hot
+    # path (all calls after first load); the inner check prevents duplicate disk
+    # I/O if two threads race on the very first call.
     if _cache.config is not None:
         return _cache.config
     with _cache.lock:

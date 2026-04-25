@@ -1,14 +1,12 @@
-"""Built-in truthy/falsy value sets -- single source of truth for the whole package.
+"""Built-in truthy/falsy value sets -- the baseline when no overrides are provided.
 
-Both core.py and config.py need these constants. Keeping them here prevents the
-circular import that would arise if config.py imported from core.py (which imports
-from config.py for _get_config).
-
-These are the baseline used when no config file is present and no call-site
-overrides are provided. They are intentionally small -- common, unambiguous tokens
-only. Users can add "y", "n", "enabled", "disabled", etc. via extend_truthy /
-extend_falsy.
+These are intentionally small: common, unambiguous tokens only. Add project-specific
+values like "enabled", "disabled", "y", "n" via extend_truthy / extend_falsy rather
+than expecting them here.
 """
+# Both _core.py and _config.py import these constants. Keeping them in a separate
+# module prevents the circular import that would arise if _config.py imported from
+# _core.py (which imports _get_config from _config.py).
 
 __all__ = ["DEFAULT_FALSY", "DEFAULT_TRUTHY"]
 
