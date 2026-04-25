@@ -4,7 +4,7 @@ import logging
 
 import pytest
 
-from envbool.core import DEFAULT_FALSY, DEFAULT_TRUTHY, _resolve, to_bool
+from envbool._core import DEFAULT_FALSY, DEFAULT_TRUTHY, _resolve, to_bool
 from envbool.exceptions import EnvBoolError, InvalidBoolValueError
 
 
@@ -258,22 +258,22 @@ class TestToBoolStrict:
 
 class TestToBoolWarn:
     def test_warn_true_emits_warning(self, caplog):
-        with caplog.at_level(logging.WARNING, logger="envbool.core"):
+        with caplog.at_level(logging.WARNING, logger="envbool._core"):
             to_bool("maybe", warn=True)
         assert caplog.records
 
     def test_warn_false_no_warning(self, caplog):
-        with caplog.at_level(logging.WARNING, logger="envbool.core"):
+        with caplog.at_level(logging.WARNING, logger="envbool._core"):
             to_bool("maybe", warn=False)
         assert not caplog.records
 
     def test_warn_none_no_warning(self, caplog):
-        with caplog.at_level(logging.WARNING, logger="envbool.core"):
+        with caplog.at_level(logging.WARNING, logger="envbool._core"):
             to_bool("maybe", warn=None)
         assert not caplog.records
 
     def test_warn_not_emitted_for_recognized_value(self, caplog):
-        with caplog.at_level(logging.WARNING, logger="envbool.core"):
+        with caplog.at_level(logging.WARNING, logger="envbool._core"):
             to_bool("true", warn=True)
         assert not caplog.records
 
@@ -320,7 +320,7 @@ class TestToBoolOverlap:
         assert to_bool("true", truthy=["true"], falsy=["true"]) is True
 
     def test_overlap_emits_warning(self, caplog):
-        with caplog.at_level(logging.WARNING, logger="envbool.core"):
+        with caplog.at_level(logging.WARNING, logger="envbool._core"):
             to_bool("true", truthy=["true"], falsy=["true"])
         assert caplog.records
 
@@ -339,3 +339,37 @@ class TestToBoolVar:
         with pytest.raises(InvalidBoolValueError) as exc_info:
             to_bool("bad", strict=True)
         assert "for " not in str(exc_info.value)
+
+
+class TestResolveNormalization:
+    def test_truthy_values_are_lowercased(self):
+        # Normalized so they match the lowercased input that to_bool() produces.
+        eff_truthy, _ = _resolve(truthy={"Enabled", "YES"})
+        assert "enabled" in eff_truthy
+        assert "yes" in eff_truthy
+        assert "Enabled" not in eff_truthy
+
+    def test_truthy_values_are_stripped(self):
+        eff_truthy, _ = _resolve(truthy={"  enabled  "})
+        assert "enabled" in eff_truthy
+
+    def test_extend_truthy_values_are_normalized(self):
+        eff_truthy, _ = _resolve(extend_truthy={"ENABLED"})
+        assert "enabled" in eff_truthy
+        assert "true" in eff_truthy  # default still present
+
+    def test_falsy_values_are_normalized(self):
+        _, eff_falsy = _resolve(falsy={"NOPE"})
+        assert "nope" in eff_falsy
+        assert "NOPE" not in eff_falsy
+
+    def test_extend_falsy_values_are_normalized(self):
+        _, eff_falsy = _resolve(extend_falsy={"  Nope  "})
+        assert "nope" in eff_falsy
+        assert "false" in eff_falsy  # default still present
+
+    def test_to_bool_with_mixed_case_truthy_arg(self):
+        assert to_bool("enabled", truthy={"Enabled"}) is True
+
+    def test_to_bool_with_mixed_case_extend_truthy_arg(self):
+        assert to_bool("enabled", extend_truthy={"ENABLED"}) is True
