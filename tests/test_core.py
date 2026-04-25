@@ -1,6 +1,11 @@
-"""Tests for core.py: DEFAULT_TRUTHY, DEFAULT_FALSY, and _resolve."""
+"""Tests for core.py: DEFAULT_TRUTHY, DEFAULT_FALSY, _resolve, and to_bool."""
 
-from envbool.core import DEFAULT_FALSY, DEFAULT_TRUTHY, _resolve
+import logging
+
+import pytest
+
+from envbool.core import DEFAULT_FALSY, DEFAULT_TRUTHY, _resolve, to_bool
+from envbool.exceptions import EnvBoolError, InvalidBoolValueError
 
 
 class TestDefaults:
@@ -162,3 +167,175 @@ class TestResolveBothSides:
         assert t == frozenset({"si"})
         assert "disabled" in f
         assert DEFAULT_FALSY.issubset(f)
+
+
+class TestToBoolDefaults:
+    def test_true_values(self):
+        for v in ("true", "1", "yes", "on"):
+            assert to_bool(v) is True
+
+    def test_false_values(self):
+        for v in ("false", "0", "no", "off"):
+            assert to_bool(v) is False
+
+    def test_case_insensitive_upper(self):
+        assert to_bool("TRUE") is True
+        assert to_bool("YES") is True
+
+    def test_case_insensitive_mixed(self):
+        assert to_bool("True") is True
+
+    def test_leading_trailing_whitespace(self):
+        assert to_bool("  true  ") is True
+        assert to_bool(" false ") is False
+
+    def test_empty_string_returns_default_false(self):
+        assert to_bool("") is False
+
+    def test_empty_string_returns_default_true(self):
+        assert to_bool("", default=True) is True
+
+    def test_whitespace_only_returns_default(self):
+        assert to_bool("   ") is False
+
+    def test_unrecognized_lenient_returns_false(self):
+        assert to_bool("maybe") is False
+
+    def test_return_type_is_bool(self):
+        assert type(to_bool("true")) is bool
+        assert type(to_bool("false")) is bool
+        assert type(to_bool("")) is bool
+
+
+class TestToBoolStrict:
+    def test_unrecognized_strict_raises(self):
+        with pytest.raises(InvalidBoolValueError):
+            to_bool("maybe", strict=True)
+
+    def test_unrecognized_strict_none_is_lenient(self):
+        assert to_bool("maybe", strict=None) is False
+
+    def test_recognized_truthy_strict_does_not_raise(self):
+        assert to_bool("true", strict=True) is True
+
+    def test_recognized_falsy_strict_returns_false(self):
+        assert to_bool("false", strict=True) is False
+
+    def test_empty_strict_returns_default(self):
+        assert to_bool("", strict=True) is False
+        assert to_bool("", strict=True, default=True) is True
+
+    def test_error_is_invalid_bool_value_error(self):
+        with pytest.raises(InvalidBoolValueError):
+            to_bool("nope", strict=True)
+
+    def test_error_is_envbool_error(self):
+        with pytest.raises(EnvBoolError):
+            to_bool("nope", strict=True)
+
+    def test_error_is_value_error(self):
+        with pytest.raises(ValueError, match="nope"):
+            to_bool("nope", strict=True)
+
+    def test_error_attributes(self):
+        with pytest.raises(InvalidBoolValueError) as exc_info:
+            to_bool("maybe", strict=True)
+        err = exc_info.value
+        assert err.value == "maybe"
+        assert err.truthy == DEFAULT_TRUTHY
+        assert err.falsy == DEFAULT_FALSY
+        assert err.var is None
+
+    def test_error_message_contains_value(self):
+        with pytest.raises(InvalidBoolValueError, match="maybe"):
+            to_bool("maybe", strict=True)
+
+    def test_error_normalizes_value(self):
+        with pytest.raises(InvalidBoolValueError) as exc_info:
+            to_bool("  MAYBE  ", strict=True)
+        assert exc_info.value.value == "maybe"
+
+
+class TestToBoolWarn:
+    def test_warn_true_emits_warning(self, caplog):
+        with caplog.at_level(logging.WARNING, logger="envbool.core"):
+            to_bool("maybe", warn=True)
+        assert caplog.records
+
+    def test_warn_false_no_warning(self, caplog):
+        with caplog.at_level(logging.WARNING, logger="envbool.core"):
+            to_bool("maybe", warn=False)
+        assert not caplog.records
+
+    def test_warn_none_no_warning(self, caplog):
+        with caplog.at_level(logging.WARNING, logger="envbool.core"):
+            to_bool("maybe", warn=None)
+        assert not caplog.records
+
+    def test_warn_not_emitted_for_recognized_value(self, caplog):
+        with caplog.at_level(logging.WARNING, logger="envbool.core"):
+            to_bool("true", warn=True)
+        assert not caplog.records
+
+
+class TestToBoolCustomSets:
+    def test_truthy_replaces(self):
+        assert to_bool("enabled", truthy=["enabled"]) is True
+        assert to_bool("true", truthy=["enabled"]) is False
+
+    def test_extend_truthy_adds(self):
+        assert to_bool("enabled", extend_truthy=["enabled"]) is True
+        assert to_bool("true", extend_truthy=["enabled"]) is True
+
+    def test_falsy_replaces(self):
+        assert to_bool("disabled", falsy=["disabled"], strict=True) is False
+
+    def test_extend_falsy_adds(self):
+        assert to_bool("disabled", extend_falsy=["disabled"], strict=True) is False
+        assert to_bool("false", extend_falsy=["disabled"], strict=True) is False
+
+    def test_truthy_takes_priority_over_extend_truthy(self):
+        assert to_bool("only", truthy=["only"], extend_truthy=["ignored"]) is True
+        assert to_bool("ignored", truthy=["only"], extend_truthy=["ignored"]) is False
+
+    def test_empty_truthy_set(self):
+        assert to_bool("true", truthy=set()) is False
+
+    def test_empty_truthy_strict_raises(self):
+        with pytest.raises(InvalidBoolValueError):
+            to_bool("true", truthy=set(), strict=True)
+
+    def test_error_attributes_reflect_custom_sets(self):
+        custom_truthy = frozenset({"yes"})
+        custom_falsy = frozenset({"no"})
+        with pytest.raises(InvalidBoolValueError) as exc_info:
+            to_bool("maybe", truthy=custom_truthy, falsy=custom_falsy, strict=True)
+        err = exc_info.value
+        assert err.truthy == custom_truthy
+        assert err.falsy == custom_falsy
+
+
+class TestToBoolOverlap:
+    def test_overlap_truthy_wins(self):
+        assert to_bool("true", truthy=["true"], falsy=["true"]) is True
+
+    def test_overlap_emits_warning(self, caplog):
+        with caplog.at_level(logging.WARNING, logger="envbool.core"):
+            to_bool("true", truthy=["true"], falsy=["true"])
+        assert caplog.records
+
+
+class TestToBoolVar:
+    def test_var_in_error_message(self):
+        with pytest.raises(InvalidBoolValueError, match="MY_VAR"):
+            to_bool("bad", strict=True, _var="MY_VAR")
+
+    def test_var_attribute_set(self):
+        with pytest.raises(InvalidBoolValueError) as exc_info:
+            to_bool("bad", strict=True, _var="MY_VAR")
+        assert exc_info.value.var == "MY_VAR"
+
+    def test_var_none_no_var_in_message(self):
+        with pytest.raises(InvalidBoolValueError) as exc_info:
+            to_bool("bad", strict=True)
+        assert "for " not in str(exc_info.value)
