@@ -34,15 +34,24 @@ Key design patterns:
 - **Config caching**: loaded once on first use via double-checked locking. `_reset_config()` clears cache for tests.
 - **Return type is always `bool`** — no `None` returns.
 
+## Workflow
+
+- Every feature, fix, or other change gets its own branch and pull request — no direct commits to main.
+- Commits must be atomic: one logical change per commit, no bundling independent changes together.
+- When there is any ambiguity in requirements or approach, ask questions before writing code.
+- Follow DRY (Don't Repeat Yourself) — extract shared logic rather than duplicating it.
+
 ## Code Style
 
 - Google-style docstrings (enforced by ruff)
 - Line length: 88 chars
 - All ruff rules enabled with pragmatic ignores (see `pyproject.toml` for details)
 - Tests are exempt from docstring and type annotation rules
+- Lean towards over-commenting: explain *why* code does something, not just *what* it does. Avoid redundant or obvious comments (e.g. `# increment i` above `i += 1`).
 
 ## Testing Notes
 
+- Maintain 100% test coverage at all times — every new code path needs a test.
 - Config tests need `tmp_path` + `monkeypatch.chdir()` for isolation.
 - Every test should start with clean config state — use `_reset_config()` in fixtures.
 - `to_bool` tests should not touch `os.environ`; `envbool` tests use `monkeypatch.setenv`/`delenv`.
