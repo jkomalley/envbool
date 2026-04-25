@@ -4,7 +4,7 @@ Coerce environment variables to booleans.
 
 [![PyPI version](https://img.shields.io/pypi/v/envbool)](https://pypi.org/project/envbool/)
 [![Python versions](https://img.shields.io/pypi/pyversions/envbool)](https://pypi.org/project/envbool/)
-[![License: MIT](https://img.shields.io/pypi/l/envbool)](https://pypi.org/project/envbool/)
+[![License: MIT](https://img.shields.io/github/license/jkomalley/envbool)](https://github.com/jkomalley/envbool/blob/main/LICENSE)
 [![CI](https://github.com/jkomalley/envbool/actions/workflows/ci.yml/badge.svg)](https://github.com/jkomalley/envbool/actions/workflows/ci.yml)
 
 ---
