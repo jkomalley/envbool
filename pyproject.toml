@@ -1,6 +1,6 @@
 [project]
 name = "envbool"
-version = "0.1.0"
+version = "0.1.1"
 description = "A small Python library and CLI tool for coercing environment variables (and arbitrary strings) into boolean values."
 readme = "README.md"
 authors = [{ name = "Kyle O'Malley", email = "j.kyle.omalley@gmail.com" }]
