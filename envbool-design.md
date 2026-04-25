@@ -106,12 +106,12 @@ This is underscore-prefixed to signal it's not part of the public API. Document 
 ```python
 # conftest.py
 import pytest
-import envbool
+from envbool._config import _reset_config
 
 @pytest.fixture(autouse=True)
 def reset_envbool_config():
     yield
-    envbool._reset_config()
+    _reset_config()
 ```
 
 ---
@@ -507,26 +507,32 @@ Options:
 
 ## Module Layout
 
+All implementation modules are private (underscore-prefixed). Users interact exclusively through `__init__.py`. `exceptions.py` is the only public submodule — kept importable by name so downstream `except` clauses can reference specific exception types without going through the top-level package.
+
 ```
 src/envbool/
 ├── __init__.py       # Public API: envbool, to_bool, load_config, EnvBoolConfig,
-│                     #   DEFAULT_TRUTHY, DEFAULT_FALSY, exceptions
+│                     #   DEFAULT_TRUTHY, DEFAULT_FALSY
 ├── py.typed          # PEP 561 marker
-├── core.py           # Core coercion logic: to_bool, set resolution, default sets
-├── env.py            # envbool() — env var reading + delegation to core
-├── config.py         # Config file discovery, loading, caching (thread-safe),
+├── exceptions.py     # Public: EnvBoolError, InvalidBoolValueError, ConfigError
+├── _defaults.py      # DEFAULT_TRUTHY, DEFAULT_FALSY (shared by _core and _config
+│                     #   to avoid a circular import)
+├── _core.py          # Core coercion logic: to_bool, _resolve, default sets
+├── _env.py           # envbool() — env var reading + delegation to _core
+├── _config.py        # Config file discovery, loading, caching (thread-safe),
 │                     #   EnvBoolConfig dataclass, _reset_config()
-├── exceptions.py     # EnvBoolError, InvalidBoolValueError, ConfigError
-└── cli.py            # CLI entry point (argparse)
+└── _cli.py           # CLI entry point (argparse)
 ```
 
-The split between `core.py` and `env.py` keeps the string coercion logic independent of `os.environ`, making `to_bool` easy to test without mocking environment variables.
+The split between `_core.py` and `_env.py` keeps the string coercion logic independent of `os.environ`, making `to_bool` easy to test without mocking environment variables.
 
-`config.py` handles discovery (project → user), TOML parsing via `tomllib`, thread-safe caching via double-checked locking, validation, and the `EnvBoolConfig` frozen dataclass. Also exposes `_reset_config()` for test teardown.
+`_defaults.py` holds `DEFAULT_TRUTHY` and `DEFAULT_FALSY` as the single source of truth. Both `_core.py` and `_config.py` import from it; without this module, `_core.py` importing `_config.py` and `_config.py` importing `_core.py` would create a circular dependency.
 
-`exceptions.py` defines the exception hierarchy. Kept in its own module so users can import exceptions without pulling in the rest of the library.
+`_config.py` handles discovery (project → user), TOML parsing via `tomllib`, thread-safe caching via double-checked locking, validation, and the `EnvBoolConfig` frozen dataclass. Also exposes `_reset_config()` for test teardown.
 
-`cli.py` uses `argparse` (stdlib) and delegates to `envbool()` / `to_bool()`.
+`exceptions.py` defines the exception hierarchy. Kept as a public module so users can write `from envbool.exceptions import InvalidBoolValueError` in `except` clauses without pulling in the rest of the library.
+
+`_cli.py` uses `argparse` (stdlib) and delegates to `envbool()` / `to_bool()`.
 
 ---
 
