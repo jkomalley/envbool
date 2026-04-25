@@ -6,8 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `envbool` is a Python library and CLI tool for coercing environment variables and arbitrary strings into boolean values. Python 3.11+, src layout, managed with `uv`.
 
-The design document (`envbool-design.md`) is the authoritative specification for all behavior, API surface, error handling, config discovery, and edge cases. Consult it before implementing or modifying any feature.
-
 ## Commands
 
 - **Install deps:** `uv sync`
@@ -20,7 +18,7 @@ The design document (`envbool-design.md`) is the authoritative specification for
 
 ## Architecture
 
-The project uses a `src/envbool/` layout. The design doc (`envbool-design.md`) specifies this module structure:
+The project uses a `src/envbool/` layout with this module structure:
 
 - `core.py` — Pure string coercion logic (`to_bool`, set resolution, default sets). No `os.environ` dependency.
 - `env.py` — `envbool()` function: reads env vars, delegates to `core.py`.
