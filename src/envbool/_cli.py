@@ -40,7 +40,7 @@ import sys
 from envbool._config import load_config
 from envbool._core import _resolve, to_bool
 from envbool._env import envbool
-from envbool.exceptions import InvalidBoolValueError
+from envbool.exceptions import ConfigError, InvalidBoolValueError
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -152,27 +152,6 @@ def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
 
-    if args.show_config:
-        conflicting = (
-            args.var is not None
-            or args.value is not None
-            or args.print_result
-            or args.default
-        )
-        if conflicting:
-            parser.error(
-                "--show-config is mutually exclusive with VAR_NAME, --value, "
-                "--print, and --default"
-            )
-        _print_config(args)
-        sys.exit(0)
-
-    # --value and VAR_NAME are mutually exclusive. Using argparse's built-in
-    # add_mutually_exclusive_group would place them in a separate usage section,
-    # which makes the help text harder to read, so we validate manually instead.
-    if args.value is not None and args.var is not None:
-        parser.error("VAR_NAME and --value are mutually exclusive")
-
     value_set_kwargs = {
         "truthy": args.truthy,
         "falsy": args.falsy,
@@ -180,7 +159,33 @@ def main() -> None:
         "extend_falsy": args.extend_falsy,
     }
 
+    # Both --show-config and the coercion calls below trigger config-file loading,
+    # so a malformed config can raise ConfigError from either path. A single error
+    # boundary around both keeps that failure a clean "error: ..." exit rather than
+    # an uncaught traceback. parser.error() and sys.exit() raise SystemExit, which
+    # is not caught here and so propagates as intended.
     try:
+        if args.show_config:
+            conflicting = (
+                args.var is not None
+                or args.value is not None
+                or args.print_result
+                or args.default
+            )
+            if conflicting:
+                parser.error(
+                    "--show-config is mutually exclusive with VAR_NAME, --value, "
+                    "--print, and --default"
+                )
+            _print_config(args)
+            sys.exit(0)
+
+        # --value and VAR_NAME are mutually exclusive. Using argparse's built-in
+        # add_mutually_exclusive_group would place them in a separate usage section,
+        # which makes the help text harder to read, so we validate manually instead.
+        if args.value is not None and args.var is not None:
+            parser.error("VAR_NAME and --value are mutually exclusive")
+
         if args.value is not None:
             result = to_bool(
                 args.value,
@@ -218,7 +223,7 @@ def main() -> None:
         else:
             parser.print_usage(sys.stderr)
             sys.exit(2)
-    except InvalidBoolValueError as e:
+    except (InvalidBoolValueError, ConfigError) as e:
         print(f"error: {e}", file=sys.stderr)
         sys.exit(2)
 

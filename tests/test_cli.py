@@ -389,3 +389,39 @@ class TestCLIShowConfig:
         code = run_cli("--show-config", "--default", monkeypatch=monkeypatch)
         assert code == 2
         assert "mutually exclusive" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------------------
+# Malformed config file handling
+# ---------------------------------------------------------------------------
+
+
+class TestCLIConfigError:
+    def test_malformed_config_on_var_lookup_exits_2(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        # A malformed config file in the tree must surface as a clean CLI error
+        # (exit 2, message on stderr), not an uncaught traceback.
+        (tmp_path / "envbool.toml").write_text('strict = "yes"\n')
+        monkeypatch.chdir(tmp_path)
+        # A non-empty value is required: an unset/empty var short-circuits in
+        # to_bool() before config is ever loaded, so it would never hit the error.
+        monkeypatch.setenv("TEST_VAR", "true")
+        _reset_config()
+        code = run_cli("TEST_VAR", monkeypatch=monkeypatch)
+        assert code == 2
+        captured = capsys.readouterr()
+        assert "error" in captured.err.lower()
+        assert "Traceback" not in captured.err
+
+    def test_malformed_config_on_show_config_exits_2(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        (tmp_path / "envbool.toml").write_text('strict = "yes"\n')
+        monkeypatch.chdir(tmp_path)
+        _reset_config()
+        code = run_cli("--show-config", monkeypatch=monkeypatch)
+        assert code == 2
+        captured = capsys.readouterr()
+        assert "error" in captured.err.lower()
+        assert "Traceback" not in captured.err
