@@ -204,3 +204,73 @@ class TestCLIConfigIntegration:
         monkeypatch.setenv("TEST_VAR", "enabled")
         code = run_cli("TEST_VAR", monkeypatch=monkeypatch)
         assert code == 0
+
+
+# ---------------------------------------------------------------------------
+# Custom truthy/falsy value sets (--truthy/--falsy/--extend-truthy/--extend-falsy)
+# ---------------------------------------------------------------------------
+
+
+class TestCLIValueSets:
+    def test_truthy_replaces_default_set(self, monkeypatch):
+        # "true" is a default truthy value but is excluded once --truthy replaces
+        # the set entirely, so it should now be treated as unrecognized (falsy).
+        monkeypatch.setenv("TEST_VAR", "true")
+        code = run_cli("TEST_VAR", "--truthy", "yes", monkeypatch=monkeypatch)
+        assert code == 1
+
+    def test_truthy_replace_recognizes_custom_value(self, monkeypatch):
+        monkeypatch.setenv("TEST_VAR", "yes")
+        code = run_cli("TEST_VAR", "--truthy", "yes", monkeypatch=monkeypatch)
+        assert code == 0
+
+    def test_falsy_replaces_default_set(self, monkeypatch):
+        monkeypatch.setenv("TEST_VAR", "off")
+        code = run_cli("TEST_VAR", "--falsy", "nope", monkeypatch=monkeypatch)
+        # "off" is no longer in the (replaced) falsy set and isn't truthy either,
+        # so lenient mode falls back to False -> exit 1.
+        assert code == 1
+
+    def test_extend_truthy_adds_to_defaults(self, monkeypatch):
+        monkeypatch.setenv("TEST_VAR", "enabled")
+        code = run_cli(
+            "TEST_VAR", "--extend-truthy", "enabled", monkeypatch=monkeypatch
+        )
+        assert code == 0
+
+    def test_extend_truthy_keeps_defaults(self, monkeypatch):
+        # Default truthy values still work alongside the extension.
+        monkeypatch.setenv("TEST_VAR", "true")
+        code = run_cli(
+            "TEST_VAR", "--extend-truthy", "enabled", monkeypatch=monkeypatch
+        )
+        assert code == 0
+
+    def test_extend_falsy_adds_to_defaults(self, monkeypatch):
+        monkeypatch.setenv("TEST_VAR", "nope")
+        code = run_cli("TEST_VAR", "--extend-falsy", "nope", monkeypatch=monkeypatch)
+        assert code == 1
+
+    def test_repeated_extend_truthy_accumulates(self, monkeypatch):
+        monkeypatch.setenv("TEST_VAR", "on2")
+        code = run_cli(
+            "TEST_VAR",
+            "--extend-truthy",
+            "on1",
+            "--extend-truthy",
+            "on2",
+            monkeypatch=monkeypatch,
+        )
+        assert code == 0
+
+    def test_combined_truthy_and_extend_falsy(self, monkeypatch):
+        monkeypatch.setenv("TEST_VAR", "nope")
+        code = run_cli(
+            "TEST_VAR",
+            "--truthy",
+            "yes",
+            "--extend-falsy",
+            "nope",
+            monkeypatch=monkeypatch,
+        )
+        assert code == 1
