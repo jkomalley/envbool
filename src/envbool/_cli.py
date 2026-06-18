@@ -15,6 +15,10 @@ Exit codes:
 
 Omitting --strict defers to the config file setting (default: lenient).
 
+Value sets: --truthy/--falsy (repeatable) replace the truthy/falsy set;
+--extend-truthy/--extend-falsy (repeatable) add to it. Mirrors ruff's
+select/extend-select pattern.
+
 Public surface:
     main()  -- entry point registered as the "envbool" command
 """
@@ -75,6 +79,30 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help='Print "true" or "false" instead of using exit codes.',
     )
+    parser.add_argument(
+        "--truthy",
+        metavar="VALUE",
+        action="append",
+        help="Replace the truthy set with VALUE (repeatable).",
+    )
+    parser.add_argument(
+        "--falsy",
+        metavar="VALUE",
+        action="append",
+        help="Replace the falsy set with VALUE (repeatable).",
+    )
+    parser.add_argument(
+        "--extend-truthy",
+        metavar="VALUE",
+        action="append",
+        help="Add VALUE to the truthy set (repeatable).",
+    )
+    parser.add_argument(
+        "--extend-falsy",
+        metavar="VALUE",
+        action="append",
+        help="Add VALUE to the falsy set (repeatable).",
+    )
     return parser
 
 
@@ -90,11 +118,28 @@ def main() -> None:
     if args.value is not None and args.var is not None:
         parser.error("VAR_NAME and --value are mutually exclusive")
 
+    value_set_kwargs = {
+        "truthy": args.truthy,
+        "falsy": args.falsy,
+        "extend_truthy": args.extend_truthy,
+        "extend_falsy": args.extend_falsy,
+    }
+
     try:
         if args.value is not None:
-            result = to_bool(args.value, strict=args.strict, default=args.default)
+            result = to_bool(
+                args.value,
+                strict=args.strict,
+                default=args.default,
+                **value_set_kwargs,
+            )
         elif args.var is not None:
-            result = envbool(args.var, strict=args.strict, default=args.default)
+            result = envbool(
+                args.var,
+                strict=args.strict,
+                default=args.default,
+                **value_set_kwargs,
+            )
         elif not sys.stdin.isatty():
             # Non-TTY stdin means the user piped or redirected input. Strip surrounding
             # whitespace (handles the trailing newline echo adds) then reject anything
@@ -106,7 +151,12 @@ def main() -> None:
                     file=sys.stderr,
                 )
                 sys.exit(2)
-            result = to_bool(raw, strict=args.strict, default=args.default)
+            result = to_bool(
+                raw,
+                strict=args.strict,
+                default=args.default,
+                **value_set_kwargs,
+            )
         else:
             parser.print_usage(sys.stderr)
             sys.exit(2)
