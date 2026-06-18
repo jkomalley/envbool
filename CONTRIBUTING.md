@@ -99,6 +99,37 @@ you'd rather not install `just`.
 
 CI runs the full check suite against Python 3.11–3.14 on every pull request.
 
+## Releasing
+
+Releases are published to PyPI automatically: the CD workflow fires when CI
+passes on `main` and publishes whenever `pyproject.toml`'s version isn't already
+on PyPI. So a release is just a version bump merged to `main`.
+
+Choose the bump from the changes since the **last release tag**, not just your
+latest work:
+
+```bash
+git log "$(git describe --tags --abbrev=0)"..HEAD --oneline
+```
+
+Map the conventional-commit types in that range to a [semver](https://semver.org/)
+bump and apply it with `uv`:
+
+| Changes since last release | Bump | Command |
+| --- | --- | --- |
+| Any `feat:` | minor | `uv version --bump minor` |
+| Only `fix:` / `docs:` / `chore:` | patch | `uv version --bump patch` |
+| A breaking change (`feat!:`, `BREAKING CHANGE`) | major¹ | `uv version --bump major` |
+
+¹ While the project is pre-1.0, breaking changes are released as a **minor**
+bump per semver's 0.x convention.
+
+Open the bump as its own PR. The `version-guard` CI job enforces this: it fails
+any release PR whose bump is too small for the commits since the last release
+(for example, shipping a `feat:` in a patch). Features merged to `main` without
+a release accumulate, so the bump must account for all of them — not just the
+most recent change.
+
 ## License
 
 By contributing, you agree that your contributions are licensed under the
