@@ -91,21 +91,32 @@ echo "yes" | envbool && echo "truthy"
 envbool --strict ENABLE_CACHE || echo "cache is off or misconfigured"
 ```
 
-### Flag reference
+```
+$ envbool --help
+usage: envbool [-h] [--value TEXT] [--strict] [--warn] [--default] [--print]
+               [--truthy VALUE] [--falsy VALUE] [--extend-truthy VALUE]
+               [--extend-falsy VALUE] [--show-config]
+               [VAR_NAME]
 
-| Flag | Description |
-|---|---|
-| `VAR_NAME` | Environment variable name to check. |
-| `--value`, `-v TEXT` | Check a literal string instead of an env var. |
-| `--strict`, `-s` | Raise an error on unrecognized values. |
-| `--warn` | Log a warning on unrecognized values. |
-| `--default`, `-d` | Default value if unset/empty (default: false). |
-| `--print`, `-p` | Print `"true"`/`"false"` instead of using exit codes. |
-| `--truthy VALUE` | Replace the truthy set with `VALUE` (repeatable). |
-| `--falsy VALUE` | Replace the falsy set with `VALUE` (repeatable). |
-| `--extend-truthy VALUE` | Add `VALUE` to the truthy set (repeatable). |
-| `--extend-falsy VALUE` | Add `VALUE` to the falsy set (repeatable). |
-| `--show-config` | Print the effective configuration and exit. |
+Coerce an environment variable or string to a boolean.
+
+positional arguments:
+  VAR_NAME              Environment variable name to check.
+
+options:
+  -h, --help            show this help message and exit
+  --value, -v TEXT      Check a literal string instead of an env var.
+  --strict, -s          Raise error on unrecognized values.
+  --warn                Log a warning on unrecognized values.
+  --default, -d         Default value if unset/empty (default: false).
+  --print, -p           Print "true" or "false" instead of using exit codes.
+  --truthy VALUE        Replace the truthy set with VALUE (repeatable).
+  --falsy VALUE         Replace the falsy set with VALUE (repeatable).
+  --extend-truthy VALUE
+                        Add VALUE to the truthy set (repeatable).
+  --extend-falsy VALUE  Add VALUE to the falsy set (repeatable).
+  --show-config         Print the effective configuration and exit.
+```
 
 Omitting `--strict` or `--warn` defers to the config file setting. `VAR_NAME` and `--value` are mutually exclusive. `--show-config` is mutually exclusive with `VAR_NAME`, `--value`, `--print`, and `--default`, but can be combined with the value-set flags to preview overrides.
 
