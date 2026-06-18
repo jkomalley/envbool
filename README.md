@@ -82,32 +82,15 @@ to_bool("maybe", strict=True)   # raises InvalidBoolValueError
 
 ## CLI
 
-The `envbool` command exits `0` for truthy and `1` for falsy, so it works naturally in shell scripts.
+The `envbool` command exits `0` for truthy and `1` for falsy, so it works naturally in shell scripts. Input comes from `VAR_NAME`, `--value`, or a stdin pipe (in that priority order).
 
 ```bash
-# Control flow via exit code
-envbool DEBUG && echo "debug is on"
-
-# Print the resolved value instead of using the exit code
-echo "Verbose: $(envbool --print VERBOSE)"
-
-# Coerce a literal string instead of reading an env var
-envbool --value "yes" && echo "truthy"
-
-# Pipe a string
-echo "yes" | envbool && echo "truthy"
-
-# Strict mode: fail loudly on unrecognized values
-envbool --strict ENABLE_CACHE || echo "cache is off or misconfigured"
-
-# Warn (but don't fail) on unrecognized values, e.g. while migrating to strict
-envbool --warn LEGACY_FLAG
-
-# Inspect the effective configuration (file path, strict, warn, value sets)
-envbool --show-config
+envbool DEBUG && echo "debug is on"             # exit-code control flow
+echo "Verbose: $(envbool --print VERBOSE)"      # print the value instead
+echo "yes" | envbool && echo "truthy"           # pipe a string
+envbool --strict ENABLE_CACHE || echo "bad"     # fail on unrecognized values
+envbool --show-config                           # inspect effective config
 ```
-
-### Flag reference
 
 | Flag | Description |
 |---|---|
@@ -117,15 +100,11 @@ envbool --show-config
 | `--warn` | Log a warning on unrecognized values. |
 | `--default`, `-d` | Default value if unset/empty (default: false). |
 | `--print`, `-p` | Print `"true"`/`"false"` instead of using exit codes. |
-| `--truthy VALUE` | Replace the truthy set with `VALUE` (repeatable). |
-| `--falsy VALUE` | Replace the falsy set with `VALUE` (repeatable). |
-| `--extend-truthy VALUE` | Add `VALUE` to the truthy set (repeatable). |
-| `--extend-falsy VALUE` | Add `VALUE` to the falsy set (repeatable). |
+| `--truthy`, `--falsy VALUE` | Replace the truthy/falsy set (repeatable). |
+| `--extend-truthy`, `--extend-falsy VALUE` | Add to the truthy/falsy set (repeatable). |
 | `--show-config` | Print the effective configuration and exit. |
 
-Omitting `--strict` or `--warn` defers to the config file setting. `VAR_NAME` and `--value` are mutually exclusive. `--show-config` is mutually exclusive with `VAR_NAME`, `--value`, `--print`, and `--default`, but can be combined with the value-set flags to preview overrides.
-
-If no `VAR_NAME`, `--value`, or stdin pipe is given, the CLI prints usage and exits `2`.
+`--strict`/`--warn` default to the config file setting when omitted. `--show-config` is mutually exclusive with `VAR_NAME`, `--value`, `--print`, and `--default`, but can be combined with the value-set flags to preview overrides.
 
 ## Configuration
 
@@ -161,9 +140,7 @@ Both `envbool()` and `to_bool()` accept the same keyword arguments: `default`, `
 
 ### Testing code that calls envbool
 
-envbool loads its config file once and caches it for the lifetime of the process. If your test suite creates temporary config files or relies on specific config state, you need to clear that cache between tests — otherwise the first test to trigger config loading will pollute all subsequent tests.
-
-Add this fixture to your `conftest.py`:
+envbool caches its config file for the process lifetime, so tests that use temporary config files need to clear that cache between runs. Add an autouse fixture:
 
 ```python
 # conftest.py
@@ -176,24 +153,11 @@ def _reset_envbool_config():
     _reset_config()
 ```
 
-`_reset_config()` is intentionally private (underscore-prefixed, not in `__all__`), but it is stable and intended for exactly this use. It clears the cache under a lock, so it is safe to call from any thread.
+`_reset_config()` is private but stable and intended for exactly this use.
 
 ### Exception handling
 
-All envbool exceptions inherit from `EnvBoolError`, so you can catch the whole library in one place:
-
-```python
-from envbool import EnvBoolError
-
-try:
-    result = envbool("MY_VAR", strict=True)
-except EnvBoolError:
-    ...
-```
-
-For finer-grained handling:
-
-**`InvalidBoolValueError`** is raised in strict mode when a value is not in the truthy or falsy sets. It also inherits from `ValueError`, so existing `except ValueError` handlers continue to work without changes.
+`InvalidBoolValueError` (strict mode, also a `ValueError`) and `ConfigError` (malformed config file) both inherit from `EnvBoolError`, so you can catch either specifically or the whole library at once:
 
 ```python
 from envbool import envbool, InvalidBoolValueError
@@ -201,87 +165,18 @@ from envbool import envbool, InvalidBoolValueError
 try:
     result = envbool("MY_VAR", strict=True)
 except InvalidBoolValueError as e:
-    print(e.var)    # "MY_VAR" — env var name, or None when raised from to_bool()
-    print(e.value)  # "maybe" — the normalized (stripped, lowercased) value
-    print(e.truthy) # frozenset({"true", "1", "yes", "on"}) — effective truthy set
-    print(e.falsy)  # frozenset({"false", "0", "no", "off"}) — effective falsy set
+    print(e.var, e.value, e.truthy, e.falsy)  # "MY_VAR" "maybe" frozenset(...) frozenset(...)
 ```
 
-The exception message includes the full expected sets for easy debugging:
-
-```
-InvalidBoolValueError: Invalid boolean value for MY_VAR: 'maybe'
-  Expected truthy: 1, on, true, yes
-  Expected falsy:  0, false, no, off
-```
-
-**`ConfigError`** is raised when a config file is found but malformed or contains wrong value types (e.g. `strict = "yes"` instead of `strict = true`). It carries the file path:
-
-```python
-from envbool import ConfigError, load_config
-
-try:
-    load_config()
-except ConfigError as e:
-    print(e.path)  # Path to the problematic file
-```
+`ConfigError` carries the offending file path via `e.path`.
 
 ### Logging
 
-envbool uses Python's standard `logging` module with a namespaced logger. No handlers are attached — the library follows the convention of letting the application configure logging.
-
-To see envbool log output in your application:
-
-```python
-import logging
-logging.basicConfig(level=logging.DEBUG)
-```
-
-Or target just the envbool logger:
-
-```python
-import logging
-logging.getLogger("envbool").setLevel(logging.DEBUG)
-logging.getLogger("envbool").addHandler(logging.StreamHandler())
-```
-
-What gets logged:
-
-| Level | When |
-|---|---|
-| `DEBUG` | Config file discovered and loaded (includes path) |
-| `DEBUG` | No config file found — using hardcoded defaults |
-| `WARNING` | Unrecognized value in lenient mode (only when `warn=True`) |
-| `WARNING` | Overlapping truthy/falsy values (truthy wins) |
-
-The `warn` parameter controls whether unrecognized lenient-mode values emit a warning. `None` (the default) defers to the config file setting; `True` or `False` override it:
-
-```python
-# Emit a warning when "maybe" falls through to False
-envbool("MY_VAR", warn=True)
-
-# Suppress warnings even if the config file sets warn = true
-envbool("MY_VAR", warn=False)
-```
+envbool logs to the standard `logging` module under the `"envbool"` namespace, with no handlers attached — configure it the same way you would any library logger (`logging.getLogger("envbool")`). It logs `DEBUG` for config discovery and `WARNING` for overlapping truthy/falsy values or, when `warn=True` (or the config sets `warn = true`), unrecognized values in lenient mode.
 
 ### Tri-state limitation
 
-`envbool()` always returns `bool`. It cannot distinguish between a variable that is unset and one that is set to an empty string — both return `default` (which is `False` unless you pass `default=True`).
-
-This is a deliberate trade-off. Most deployment tooling cannot meaningfully distinguish the two states, and a `bool` return type keeps the API simple and type signatures clean.
-
-If you need tri-state detection, check `os.environ` directly before calling `envbool()`:
-
-```python
-import os
-from envbool import envbool
-
-if "MY_VAR" not in os.environ:
-    # Variable is absent — handle the "not configured" case
-    ...
-else:
-    result = envbool("MY_VAR")
-```
+`envbool()` always returns `bool` — it can't distinguish an unset variable from one set to `""`; both return `default`. If you need that distinction, check `os.environ` directly before calling `envbool()`.
 
 ## Contributing
 

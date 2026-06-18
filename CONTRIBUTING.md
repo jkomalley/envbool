@@ -19,7 +19,7 @@ uv run pre-commit install
 
 ### Running checks
 
-The project uses [`just`](https://github.com/casey/just) as a task runner:
+[`just`](https://github.com/casey/just) is the task runner (or run the underlying `uv` commands directly):
 
 ```
 just            # format + lint + typecheck + test (run all)
@@ -29,8 +29,6 @@ just lint       # uv run ruff check src/ tests/
 just format     # uv run ruff format src/ tests/
 just typecheck  # uv run ty check src/
 ```
-
-Or run the commands directly without `just`.
 
 ### Testing notes
 
