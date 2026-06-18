@@ -145,6 +145,36 @@ def _normalize_set(values: Iterable[str]) -> frozenset[str]:
     return frozenset(v.strip().lower() for v in values)
 
 
+def _apply_replace_or_extend(
+    base: frozenset[str],
+    replace: Iterable[str] | None,
+    extend: Iterable[str] | None,
+) -> frozenset[str]:
+    """Resolve a value set using replace/extend/fall-back-to-base precedence.
+
+    Shared by _resolve() (call-site truthy/falsy args) and _config.py's
+    _parse_config() (TOML truthy/falsy keys) since both layer their inputs
+    on top of a base set using the same ruff select/extend-select pattern:
+        replace -- full replacement; caller owns the entire set
+        extend  -- additive; merges on top of base
+        neither -- use base as-is
+    replace takes precedence over extend; both cannot apply at once.
+
+    Args:
+        base: The starting set to fall back to or extend.
+        replace: If not None, fully replaces base (normalized).
+        extend: If not None and replace is None, merged on top of base.
+
+    Returns:
+        The resolved, normalized frozenset.
+    """
+    if replace is not None:
+        return _normalize_set(replace)
+    if extend is not None:
+        return base | _normalize_set(extend)
+    return base
+
+
 def _resolve(
     *,
     config_truthy: frozenset[str] = DEFAULT_TRUTHY,
@@ -154,24 +184,9 @@ def _resolve(
     extend_truthy: Iterable[str] | None = None,
     extend_falsy: Iterable[str] | None = None,
 ) -> tuple[frozenset[str], frozenset[str]]:
-    # Priority mirrors ruff's select/extend-select pattern:
-    #   truthy        -- full replacement; caller owns the entire set
-    #   extend_truthy -- additive; merges on top of config_truthy
-    #   (neither)     -- use config_truthy as-is (defaults when no config file)
-    # truthy takes precedence over extend_truthy; both cannot apply at once.
-    if truthy is not None:
-        effective_truthy = _normalize_set(truthy)
-    elif extend_truthy is not None:
-        effective_truthy = config_truthy | _normalize_set(extend_truthy)
-    else:
-        effective_truthy = config_truthy
-
-    # Same three-level logic for the falsy side, independent of truthy.
-    if falsy is not None:
-        effective_falsy = _normalize_set(falsy)
-    elif extend_falsy is not None:
-        effective_falsy = config_falsy | _normalize_set(extend_falsy)
-    else:
-        effective_falsy = config_falsy
+    # Priority mirrors ruff's select/extend-select pattern -- see
+    # _apply_replace_or_extend() docstring for the full precedence rules.
+    effective_truthy = _apply_replace_or_extend(config_truthy, truthy, extend_truthy)
+    effective_falsy = _apply_replace_or_extend(config_falsy, falsy, extend_falsy)
 
     return (effective_truthy, effective_falsy)
