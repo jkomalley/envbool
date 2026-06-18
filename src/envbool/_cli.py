@@ -13,7 +13,8 @@ Exit codes:
   1  -- falsy or unset/empty
   2  -- error (unrecognized value in strict mode, bad arguments, multi-line stdin)
 
-Omitting --strict defers to the config file setting (default: lenient).
+Omitting --strict or --warn defers to the config file setting (default:
+lenient, no warnings).
 
 Value sets: --truthy/--falsy (repeatable) replace the truthy/falsy set;
 --extend-truthy/--extend-falsy (repeatable) add to it. Mirrors ruff's
@@ -27,9 +28,9 @@ exclusive with VAR_NAME, --value, --print, and --default.
 Public surface:
     main()  -- entry point registered as the "envbool" command
 """
-# --strict uses default=None rather than False so an absent flag passes None
-# through to envbool()/to_bool(), which then defers to the loaded config
-# instead of overriding a config-level strict = true with False.
+# --strict and --warn use default=None rather than False so an absent flag
+# passes None through to envbool()/to_bool(), which then defers to the loaded
+# config instead of overriding a config-level strict/warn = true with False.
 
 __all__ = ["main"]
 
@@ -70,6 +71,13 @@ def _build_parser() -> argparse.ArgumentParser:
         # store_true with default=None gives: flag present -> True, absent -> None.
         default=None,
         help="Raise error on unrecognized values.",
+    )
+    parser.add_argument(
+        "--warn",
+        action="store_true",
+        # None so an absent flag defers to config rather than overriding it with False.
+        default=None,
+        help="Log a warning on unrecognized values.",
     )
     parser.add_argument(
         "--default",
@@ -129,10 +137,11 @@ def _print_config(args: argparse.Namespace) -> None:
         extend_falsy=args.extend_falsy,
     )
     effective_strict = args.strict if args.strict is not None else config.strict
+    effective_warn = args.warn if args.warn is not None else config.warn
 
     print(f"config file: {config.source_path or 'none'}")
     print(f"strict:      {str(effective_strict).lower()}")
-    print(f"warn:        {str(config.warn).lower()}")
+    print(f"warn:        {str(effective_warn).lower()}")
     print(f"truthy:      {', '.join(sorted(effective_truthy))}")
     print(f"falsy:       {', '.join(sorted(effective_falsy))}")
 
@@ -176,6 +185,7 @@ def main() -> None:
             result = to_bool(
                 args.value,
                 strict=args.strict,
+                warn=args.warn,
                 default=args.default,
                 **value_set_kwargs,
             )
@@ -183,6 +193,7 @@ def main() -> None:
             result = envbool(
                 args.var,
                 strict=args.strict,
+                warn=args.warn,
                 default=args.default,
                 **value_set_kwargs,
             )
@@ -200,6 +211,7 @@ def main() -> None:
             result = to_bool(
                 raw,
                 strict=args.strict,
+                warn=args.warn,
                 default=args.default,
                 **value_set_kwargs,
             )
