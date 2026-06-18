@@ -265,7 +265,8 @@ def _parse_config(data: dict, path: Path) -> EnvBoolConfig:
     (e.g. strict = "yes" instead of strict = true) raise ConfigError with a message
     that names the expected type, since a type mismatch is almost certainly a typo.
 
-    The extend/replace logic here mirrors _resolve() in core.py:
+    The extend/replace logic here is shared with _resolve() in _core.py via
+    _apply_replace_or_extend():
       - "truthy" replaces DEFAULT_TRUTHY entirely
       - "extend_truthy" adds to DEFAULT_TRUTHY
       - "truthy" takes priority when both present (ruff's select/extend-select pattern)
@@ -284,26 +285,25 @@ def _parse_config(data: dict, path: Path) -> EnvBoolConfig:
     strict = _get_bool_field(data, "strict", path)
     warn = _get_bool_field(data, "warn", path)
 
+    # Imported lazily (not at module level) because _core.py imports
+    # _get_config from this module at load time -- a top-level import here
+    # would create a circular import.
+    from envbool._core import _apply_replace_or_extend  # noqa: PLC0415
+
     # --- set fields: apply extend/replace logic ---
     # truthy replaces DEFAULT_TRUTHY; extend_truthy adds to it; truthy wins if both.
     raw_truthy = _get_str_list_field(data, "truthy", path)
     raw_extend_truthy = _get_str_list_field(data, "extend_truthy", path)
-    if raw_truthy is not None:
-        effective_truthy = _normalize_set(raw_truthy)
-    elif raw_extend_truthy is not None:
-        effective_truthy = DEFAULT_TRUTHY | _normalize_set(raw_extend_truthy)
-    else:
-        effective_truthy = DEFAULT_TRUTHY
+    effective_truthy = _apply_replace_or_extend(
+        DEFAULT_TRUTHY, raw_truthy, raw_extend_truthy
+    )
 
     # Same extend/replace logic for the falsy side, independent of truthy.
     raw_falsy = _get_str_list_field(data, "falsy", path)
     raw_extend_falsy = _get_str_list_field(data, "extend_falsy", path)
-    if raw_falsy is not None:
-        effective_falsy = _normalize_set(raw_falsy)
-    elif raw_extend_falsy is not None:
-        effective_falsy = DEFAULT_FALSY | _normalize_set(raw_extend_falsy)
-    else:
-        effective_falsy = DEFAULT_FALSY
+    effective_falsy = _apply_replace_or_extend(
+        DEFAULT_FALSY, raw_falsy, raw_extend_falsy
+    )
 
     _logger.debug(
         "Config loaded from %s: strict=%s warn=%s truthy=%s falsy=%s",
@@ -321,11 +321,6 @@ def _parse_config(data: dict, path: Path) -> EnvBoolConfig:
         effective_falsy=effective_falsy,
         source_path=path,
     )
-
-
-def _normalize_set(values: list[str]) -> frozenset[str]:
-    """Strip and lowercase values so they match to_bool()'s normalized input."""
-    return frozenset(v.strip().lower() for v in values)
 
 
 def _get_bool_field(data: dict, key: str, path: Path) -> bool | None:
