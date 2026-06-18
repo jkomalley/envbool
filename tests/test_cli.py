@@ -9,13 +9,6 @@ from envbool._cli import main
 from envbool._config import _reset_config
 
 
-@pytest.fixture(autouse=True)
-def reset_config():
-    _reset_config()
-    yield
-    _reset_config()
-
-
 def run_cli(*args, monkeypatch, stdin_text=None, is_tty=True):
     """Invoke main() with controlled argv/stdin. Returns (stdout, stderr, exit_code)."""
     monkeypatch.setattr(sys, "argv", ["envbool", *args])

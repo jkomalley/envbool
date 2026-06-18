@@ -9,14 +9,6 @@ from envbool._defaults import DEFAULT_FALSY, DEFAULT_TRUTHY
 from envbool._env import envbool
 from envbool.exceptions import InvalidBoolValueError
 
-
-@pytest.fixture(autouse=True)
-def reset_config():
-    _reset_config()
-    yield
-    _reset_config()
-
-
 # ---------------------------------------------------------------------------
 # Unset / empty
 # ---------------------------------------------------------------------------
