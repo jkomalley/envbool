@@ -61,6 +61,27 @@ class TestCLIExitCodes:
 
 
 # ---------------------------------------------------------------------------
+# --warn flag
+# ---------------------------------------------------------------------------
+
+
+class TestCLIWarnFlag:
+    def test_warn_flag_logs_warning_on_unrecognized_value(self, monkeypatch, caplog):
+        monkeypatch.setenv("TEST_VAR", "maybe")
+        with caplog.at_level("WARNING"):
+            code = run_cli("TEST_VAR", "--warn", monkeypatch=monkeypatch)
+        assert code == 1
+        assert "maybe" in caplog.text
+
+    def test_no_warn_flag_logs_nothing(self, monkeypatch, caplog):
+        monkeypatch.setenv("TEST_VAR", "maybe")
+        with caplog.at_level("WARNING"):
+            code = run_cli("TEST_VAR", monkeypatch=monkeypatch)
+        assert code == 1
+        assert caplog.text == ""
+
+
+# ---------------------------------------------------------------------------
 # --value flag
 # ---------------------------------------------------------------------------
 
@@ -197,6 +218,15 @@ class TestCLIConfigIntegration:
         code = run_cli("TEST_VAR", "--strict", monkeypatch=monkeypatch)
         assert code == 2
 
+    def test_config_warn_propagates(self, monkeypatch, tmp_path, caplog):
+        (tmp_path / "envbool.toml").write_text("warn = true\n")
+        monkeypatch.chdir(tmp_path)
+        _reset_config()
+        monkeypatch.setenv("TEST_VAR", "maybe")
+        with caplog.at_level("WARNING"):
+            run_cli("TEST_VAR", monkeypatch=monkeypatch)
+        assert "maybe" in caplog.text
+
     def test_config_extend_truthy_propagates(self, monkeypatch, tmp_path):
         (tmp_path / "envbool.toml").write_text('extend_truthy = ["enabled"]\n')
         monkeypatch.chdir(tmp_path)
@@ -316,6 +346,15 @@ class TestCLIShowConfig:
         assert code == 0
         out = capsys.readouterr().out
         assert "strict:      true" in out
+
+    def test_cli_warn_flag_overrides_printed_warn(self, monkeypatch, tmp_path, capsys):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("ENVBOOL_NO_CONFIG", "1")
+        _reset_config()
+        code = run_cli("--show-config", "--warn", monkeypatch=monkeypatch)
+        assert code == 0
+        out = capsys.readouterr().out
+        assert "warn:        true" in out
 
     def test_cli_extend_truthy_reflected_in_printed_truthy(
         self, monkeypatch, tmp_path, capsys
