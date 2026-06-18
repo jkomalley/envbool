@@ -84,11 +84,19 @@ to_bool("maybe", strict=True)   # raises InvalidBoolValueError
 
 The `envbool` command exits `0` for truthy and `1` for falsy, so it works naturally in shell scripts.
 
-```bash
-envbool DEBUG && echo "debug is on"
-echo "Verbose: $(envbool --print VERBOSE)"
-echo "yes" | envbool && echo "truthy"
-envbool --strict ENABLE_CACHE || echo "cache is off or misconfigured"
+```console
+$ export DEBUG=true
+$ envbool DEBUG && echo "debug is on"
+debug is on
+
+$ echo "Verbose: $(envbool --print VERBOSE)"
+Verbose: false
+
+$ echo "yes" | envbool && echo "truthy"
+truthy
+
+$ envbool --strict ENABLE_CACHE || echo "cache is off or misconfigured"
+cache is off or misconfigured
 ```
 
 ```
