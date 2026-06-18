@@ -85,26 +85,10 @@ to_bool("maybe", strict=True)   # raises InvalidBoolValueError
 The `envbool` command exits `0` for truthy and `1` for falsy, so it works naturally in shell scripts.
 
 ```bash
-# Control flow via exit code
 envbool DEBUG && echo "debug is on"
-
-# Print the resolved value instead of using the exit code
 echo "Verbose: $(envbool --print VERBOSE)"
-
-# Coerce a literal string instead of reading an env var
-envbool --value "yes" && echo "truthy"
-
-# Pipe a string
 echo "yes" | envbool && echo "truthy"
-
-# Strict mode: fail loudly on unrecognized values
 envbool --strict ENABLE_CACHE || echo "cache is off or misconfigured"
-
-# Warn (but don't fail) on unrecognized values, e.g. while migrating to strict
-envbool --warn LEGACY_FLAG
-
-# Inspect the effective configuration (file path, strict, warn, value sets)
-envbool --show-config
 ```
 
 ### Flag reference
@@ -180,20 +164,7 @@ def _reset_envbool_config():
 
 ### Exception handling
 
-All envbool exceptions inherit from `EnvBoolError`, so you can catch the whole library in one place:
-
-```python
-from envbool import EnvBoolError
-
-try:
-    result = envbool("MY_VAR", strict=True)
-except EnvBoolError:
-    ...
-```
-
-For finer-grained handling:
-
-**`InvalidBoolValueError`** is raised in strict mode when a value is not in the truthy or falsy sets. It also inherits from `ValueError`, so existing `except ValueError` handlers continue to work without changes.
+Both exceptions below inherit from `EnvBoolError`, so `except EnvBoolError` catches either. Catch the specific one when you need its details:
 
 ```python
 from envbool import envbool, InvalidBoolValueError
@@ -207,7 +178,7 @@ except InvalidBoolValueError as e:
     print(e.falsy)  # frozenset({"false", "0", "no", "off"}) — effective falsy set
 ```
 
-The exception message includes the full expected sets for easy debugging:
+`InvalidBoolValueError` is raised in strict mode for unrecognized values and also inherits from `ValueError`, so existing `except ValueError` handlers keep working. Its message includes the full expected sets:
 
 ```
 InvalidBoolValueError: Invalid boolean value for MY_VAR: 'maybe'
@@ -215,35 +186,19 @@ InvalidBoolValueError: Invalid boolean value for MY_VAR: 'maybe'
   Expected falsy:  0, false, no, off
 ```
 
-**`ConfigError`** is raised when a config file is found but malformed or contains wrong value types (e.g. `strict = "yes"` instead of `strict = true`). It carries the file path:
-
-```python
-from envbool import ConfigError, load_config
-
-try:
-    load_config()
-except ConfigError as e:
-    print(e.path)  # Path to the problematic file
-```
+`ConfigError` is raised when a config file is found but malformed (e.g. `strict = "yes"` instead of `strict = true`). It carries the file path via `e.path`.
 
 ### Logging
 
-envbool uses Python's standard `logging` module with a namespaced logger. No handlers are attached — the library follows the convention of letting the application configure logging.
-
-To see envbool log output in your application:
-
-```python
-import logging
-logging.basicConfig(level=logging.DEBUG)
-```
-
-Or target just the envbool logger:
+envbool logs through the standard `logging` module under the `"envbool"` namespace. No handlers are attached by default — configure it like any other library logger:
 
 ```python
 import logging
 logging.getLogger("envbool").setLevel(logging.DEBUG)
 logging.getLogger("envbool").addHandler(logging.StreamHandler())
 ```
+
+(Or just call `logging.basicConfig(level=logging.DEBUG)` to see output from everything, envbool included.)
 
 What gets logged:
 
