@@ -14,12 +14,14 @@ import os
 from collections.abc import Iterable
 
 from envbool._core import to_bool
+from envbool.exceptions import MissingEnvVarError
 
 
 def envbool(
     var: str,
     *,
     default: bool = False,
+    required: bool = False,
     strict: bool | None = None,
     warn: bool | None = None,
     truthy: Iterable[str] | None = None,
@@ -32,6 +34,9 @@ def envbool(
     Args:
         var: Environment variable name.
         default: Returned when the variable is unset or empty.
+        required: When True, raise if the variable is not set at all. A truly
+            unset var raises before `default` is considered; a var set to an
+            empty string is "present" and still coerces via `default`.
         strict: Raise on unrecognized values. None defers to config (default False).
         warn: Log a warning on unrecognized values. None defers to config
             (default False).
@@ -45,7 +50,17 @@ def envbool(
 
     Raises:
         InvalidBoolValueError: In strict mode when the value is unrecognized.
+        MissingEnvVarError: When required=True and the variable is unset.
     """
+    # `required` distinguishes "absent from the environment" from "set but empty"
+    # -- membership, not the value, so VAR= (empty) is treated as present. This
+    # check precedes the default-handling below so an unset required var raises
+    # instead of silently falling back to `default`.
+    if required and var not in os.environ:
+        err = MissingEnvVarError(f"Required environment variable {var} is not set")
+        err.var = var
+        raise err
+
     # Missing var becomes "" so to_bool treats it the same as an empty value,
     # returning `default` rather than raising or treating absence as a distinct state.
     value = os.environ.get(var, "")
