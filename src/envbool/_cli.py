@@ -11,7 +11,8 @@ Input source (first match wins):
 Exit codes:
   0  -- truthy
   1  -- falsy or unset/empty
-  2  -- error (unrecognized value in strict mode, bad arguments, multi-line stdin)
+  2  -- error (unrecognized value in strict mode, unset VAR_NAME with --required,
+        bad arguments, multi-line stdin)
 
 Omitting --strict or --warn defers to the config file setting (default:
 lenient, no warnings).
@@ -40,7 +41,7 @@ import sys
 from envbool._config import load_config
 from envbool._core import _resolve, to_bool
 from envbool._env import envbool
-from envbool.exceptions import ConfigError, InvalidBoolValueError
+from envbool.exceptions import ConfigError, InvalidBoolValueError, MissingEnvVarError
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -85,6 +86,13 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=False,
         help="Default value if unset/empty (default: false).",
+    )
+    parser.add_argument(
+        "--required",
+        "-r",
+        action="store_true",
+        default=False,
+        help="Exit 2 if VAR_NAME is not set in the environment.",
     )
     parser.add_argument(
         "--print",
@@ -146,18 +154,78 @@ def _print_config(args: argparse.Namespace) -> None:
     print(f"falsy:       {', '.join(sorted(effective_falsy))}")
 
 
-def main() -> None:
-    """Parse arguments, resolve the input source, and exit with the appropriate code."""
-    # All coercion logic lives in _core.py; this function is pure I/O plumbing.
-    parser = _build_parser()
-    args = parser.parse_args()
+def _coerce_from_source(
+    parser: argparse.ArgumentParser, args: argparse.Namespace
+) -> bool:
+    """Resolve the input source (--value, VAR_NAME, or stdin) and coerce it to bool.
 
+    Validates the mutually exclusive source flags, then dispatches to the matching
+    coercion call. Exits via parser.error()/sys.exit() for usage errors; the
+    coercion exceptions propagate to main()'s single error boundary.
+    """
     value_set_kwargs = {
         "truthy": args.truthy,
         "falsy": args.falsy,
         "extend_truthy": args.extend_truthy,
         "extend_falsy": args.extend_falsy,
     }
+
+    # --value and VAR_NAME are mutually exclusive. Using argparse's built-in
+    # add_mutually_exclusive_group would place them in a separate usage section,
+    # which makes the help text harder to read, so we validate manually instead.
+    if args.value is not None and args.var is not None:
+        parser.error("VAR_NAME and --value are mutually exclusive")
+
+    # --required only governs the env-var lookup; a literal --value always
+    # has a value, so combining them is a usage error rather than a no-op.
+    if args.required and args.value is not None:
+        parser.error("--required and --value are mutually exclusive")
+
+    if args.value is not None:
+        return to_bool(
+            args.value,
+            strict=args.strict,
+            warn=args.warn,
+            default=args.default,
+            **value_set_kwargs,
+        )
+    if args.var is not None:
+        return envbool(
+            args.var,
+            strict=args.strict,
+            warn=args.warn,
+            default=args.default,
+            required=args.required,
+            **value_set_kwargs,
+        )
+    if not sys.stdin.isatty():
+        # Non-TTY stdin means the user piped or redirected input. Strip surrounding
+        # whitespace (handles the trailing newline echo adds) then reject anything
+        # with an embedded newline -- only a single value is meaningful here.
+        raw = sys.stdin.read().strip()
+        if "\n" in raw:
+            print(
+                "error: stdin must contain a single value, not multiple lines",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        return to_bool(
+            raw,
+            strict=args.strict,
+            warn=args.warn,
+            default=args.default,
+            **value_set_kwargs,
+        )
+
+    parser.print_usage(sys.stderr)
+    sys.exit(2)
+
+
+def main() -> None:
+    """Parse arguments, resolve the input source, and exit with the appropriate code."""
+    # All coercion logic lives in _core.py; this function is pure I/O plumbing.
+    parser = _build_parser()
+    args = parser.parse_args()
 
     # Both --show-config and the coercion calls below trigger config-file loading,
     # so a malformed config can raise ConfigError from either path. A single error
@@ -180,50 +248,8 @@ def main() -> None:
             _print_config(args)
             sys.exit(0)
 
-        # --value and VAR_NAME are mutually exclusive. Using argparse's built-in
-        # add_mutually_exclusive_group would place them in a separate usage section,
-        # which makes the help text harder to read, so we validate manually instead.
-        if args.value is not None and args.var is not None:
-            parser.error("VAR_NAME and --value are mutually exclusive")
-
-        if args.value is not None:
-            result = to_bool(
-                args.value,
-                strict=args.strict,
-                warn=args.warn,
-                default=args.default,
-                **value_set_kwargs,
-            )
-        elif args.var is not None:
-            result = envbool(
-                args.var,
-                strict=args.strict,
-                warn=args.warn,
-                default=args.default,
-                **value_set_kwargs,
-            )
-        elif not sys.stdin.isatty():
-            # Non-TTY stdin means the user piped or redirected input. Strip surrounding
-            # whitespace (handles the trailing newline echo adds) then reject anything
-            # with an embedded newline -- only a single value is meaningful here.
-            raw = sys.stdin.read().strip()
-            if "\n" in raw:
-                print(
-                    "error: stdin must contain a single value, not multiple lines",
-                    file=sys.stderr,
-                )
-                sys.exit(2)
-            result = to_bool(
-                raw,
-                strict=args.strict,
-                warn=args.warn,
-                default=args.default,
-                **value_set_kwargs,
-            )
-        else:
-            parser.print_usage(sys.stderr)
-            sys.exit(2)
-    except (InvalidBoolValueError, ConfigError) as e:
+        result = _coerce_from_source(parser, args)
+    except (InvalidBoolValueError, ConfigError, MissingEnvVarError) as e:
         print(f"error: {e}", file=sys.stderr)
         sys.exit(2)
 
