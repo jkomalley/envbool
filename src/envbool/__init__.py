@@ -12,6 +12,7 @@ Available names:
     envbool()             -- read an env var and coerce to bool (primary API)
     to_bool()             -- coerce an arbitrary string to bool (no os.environ)
     load_config()         -- inspect or preload the process-level config cache
+    reload_config()       -- discard the cache and re-read the config file
     EnvBoolConfig         -- frozen dataclass returned by load_config()
     DEFAULT_TRUTHY        -- built-in truthy set (frozenset)
     DEFAULT_FALSY         -- built-in falsy set (frozenset)
@@ -24,7 +25,7 @@ Available names:
 # surface can be reshaped without breaking imports. Do not import from _core,
 # _env, _config, _cli, or _defaults directly.
 
-from envbool._config import EnvBoolConfig, load_config
+from envbool._config import EnvBoolConfig, load_config, reload_config
 from envbool._core import to_bool
 from envbool._defaults import DEFAULT_FALSY, DEFAULT_TRUTHY
 from envbool._env import envbool
@@ -45,5 +46,6 @@ __all__ = [
     "MissingEnvVarError",
     "envbool",
     "load_config",
+    "reload_config",
     "to_bool",
 ]

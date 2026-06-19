@@ -214,6 +214,7 @@ Set `ENVBOOL_NO_CONFIG=1` to skip config discovery entirely.
 | `envbool(var, **opts)` | Read an environment variable and return `bool`. |
 | `to_bool(value, **opts)` | Coerce a string to `bool`. |
 | `load_config()` | Load and return the active `EnvBoolConfig` (cached). |
+| `reload_config()` | Discard the cache, re-read the config file, and return the fresh `EnvBoolConfig`. |
 | `EnvBoolConfig` | Frozen dataclass: `strict`, `warn`, `effective_truthy`, `effective_falsy`, `source_path`. |
 | `DEFAULT_TRUTHY` | `frozenset` of the built-in truthy strings. |
 | `DEFAULT_FALSY` | `frozenset` of the built-in falsy strings. |
