@@ -8,6 +8,7 @@ which predates envbool adoption keeps working without changes.
 Hierarchy:
     EnvBoolError(Exception)
         InvalidBoolValueError(EnvBoolError, ValueError)
+        MissingEnvVarError(EnvBoolError, KeyError)
         ConfigError(EnvBoolError)
 """
 
@@ -42,6 +43,24 @@ class InvalidBoolValueError(EnvBoolError, ValueError):
     # so callers can inspect exactly what was expected without re-running resolution.
     truthy: frozenset[str]
     falsy: frozenset[str]
+
+
+class MissingEnvVarError(EnvBoolError, KeyError):
+    """Raised by envbool(var, required=True) when var is not set in the environment.
+
+    Dual inheritance with KeyError mirrors the InvalidBoolValueError(ValueError)
+    pattern: a missing os.environ lookup naturally raises KeyError, so existing
+    ``except KeyError`` handlers keep working after a codebase adopts envbool.
+
+    Only a truly-unset variable triggers this -- a variable set to an empty
+    string is "present" and coerces normally via the caller's default.
+    """
+
+    # Set by the raising code after construction (see InvalidBoolValueError for
+    # why attributes live here rather than in __init__).
+
+    # Name of the environment variable that was required but not set.
+    var: str
 
 
 class ConfigError(EnvBoolError):

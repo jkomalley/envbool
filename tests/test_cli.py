@@ -61,6 +61,40 @@ class TestCLIExitCodes:
 
 
 # ---------------------------------------------------------------------------
+# --required flag
+# ---------------------------------------------------------------------------
+
+
+class TestCLIRequiredFlag:
+    def test_unset_required_exits_2(self, monkeypatch, capsys):
+        monkeypatch.delenv("TEST_VAR", raising=False)
+        code = run_cli("TEST_VAR", "--required", monkeypatch=monkeypatch)
+        assert code == 2
+        assert "error" in capsys.readouterr().err.lower()
+
+    def test_short_flag_unset_exits_2(self, monkeypatch):
+        monkeypatch.delenv("TEST_VAR", raising=False)
+        code = run_cli("TEST_VAR", "-r", monkeypatch=monkeypatch)
+        assert code == 2
+
+    def test_set_truthy_required_exits_0(self, monkeypatch):
+        monkeypatch.setenv("TEST_VAR", "true")
+        code = run_cli("TEST_VAR", "--required", monkeypatch=monkeypatch)
+        assert code == 0
+
+    def test_set_falsy_required_exits_1(self, monkeypatch):
+        monkeypatch.setenv("TEST_VAR", "false")
+        code = run_cli("TEST_VAR", "--required", monkeypatch=monkeypatch)
+        assert code == 1
+
+    def test_required_with_value_is_rejected(self, monkeypatch, capsys):
+        # A literal --value always has a value, so --required is meaningless there.
+        code = run_cli("--required", "--value", "true", monkeypatch=monkeypatch)
+        assert code == 2
+        assert "mutually exclusive" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------------------
 # --warn flag
 # ---------------------------------------------------------------------------
 

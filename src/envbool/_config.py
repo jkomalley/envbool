@@ -26,7 +26,7 @@ import platformdirs
 from envbool._defaults import DEFAULT_FALSY, DEFAULT_TRUTHY
 from envbool.exceptions import ConfigError
 
-__all__ = ["EnvBoolConfig", "load_config"]
+__all__ = ["EnvBoolConfig", "load_config", "reload_config"]
 
 _logger = logging.getLogger(__name__)
 
@@ -87,6 +87,28 @@ def load_config() -> EnvBoolConfig:
         ConfigError: If a config file is found but malformed or has invalid values.
     """
     return _get_config()
+
+
+def reload_config() -> EnvBoolConfig:
+    """Force a re-read of the config file, replacing the cached config.
+
+    ``load_config()`` caches for the lifetime of the process, so a config file
+    that is written or edited after the first lookup is never picked up. Call
+    this to discard the cache and reload from disk -- useful in long-running
+    processes (workers, servers, notebooks) that change config at runtime.
+
+    The clear-and-reload happens atomically under the cache lock so concurrent
+    readers never observe a momentarily empty cache.
+
+    Returns:
+        The freshly loaded EnvBoolConfig, now installed as the cached instance.
+
+    Raises:
+        ConfigError: If a config file is found but malformed or has invalid values.
+    """
+    with _cache.lock:
+        _cache.config = _load_config_from_disk()
+        return _cache.config
 
 
 def _get_config() -> EnvBoolConfig:

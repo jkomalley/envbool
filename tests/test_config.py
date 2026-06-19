@@ -592,6 +592,36 @@ class TestResetConfig:
 
 
 # ---------------------------------------------------------------------------
+# reload_config
+# ---------------------------------------------------------------------------
+
+
+class TestReloadConfig:
+    def test_returns_envbool_config(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        assert isinstance(envbool.reload_config(), EnvBoolConfig)
+
+    def test_picks_up_on_disk_change(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "envbool.toml").write_text("strict = false\n")
+        first = load_config()
+        assert first.strict is False
+
+        # Rewriting the file is invisible until the cache is refreshed; unlike
+        # _reset_config(), reload_config() both clears and reloads in one call.
+        (tmp_path / "envbool.toml").write_text("strict = true\n")
+        second = envbool.reload_config()
+        assert second.strict is True
+        # Subsequent reads see the refreshed config without another disk hit.
+        assert load_config() is second
+
+    def test_updates_the_shared_cache(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        reloaded = envbool.reload_config()
+        assert _get_config() is reloaded
+
+
+# ---------------------------------------------------------------------------
 # Thread safety
 # ---------------------------------------------------------------------------
 
