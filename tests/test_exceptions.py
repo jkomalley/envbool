@@ -9,7 +9,12 @@ from pathlib import Path
 
 import pytest
 
-from envbool.exceptions import ConfigError, EnvBoolError, InvalidBoolValueError
+from envbool.exceptions import (
+    ConfigError,
+    EnvBoolError,
+    InvalidBoolValueError,
+    MissingEnvVarError,
+)
 
 
 class TestEnvBoolError:
@@ -109,6 +114,49 @@ class TestInvalidBoolValueError:
         err = InvalidBoolValueError("bad")
         err.falsy = frozenset()
         assert err.falsy == frozenset()
+
+
+class TestMissingEnvVarError:
+    """Dual-inheritance: EnvBoolError + KeyError.
+
+    Must be catchable as either parent so existing ``except KeyError``
+    handlers (the natural type for a missing os.environ lookup) keep working.
+    """
+
+    # --- inheritance ---
+
+    def test_is_envbool_error(self):
+        assert issubclass(MissingEnvVarError, EnvBoolError)
+
+    def test_is_key_error(self):
+        assert issubclass(MissingEnvVarError, KeyError)
+
+    def test_not_value_error(self):
+        assert not issubclass(MissingEnvVarError, ValueError)
+
+    def test_mro_order(self):
+        """EnvBoolError should appear before KeyError in the MRO."""
+        mro = MissingEnvVarError.__mro__
+        envbool_idx = mro.index(EnvBoolError)
+        key_idx = mro.index(KeyError)
+        assert envbool_idx < key_idx
+
+    # --- raises as parent types ---
+
+    def test_raises_as_key_error(self):
+        with pytest.raises(KeyError):
+            raise MissingEnvVarError("missing")
+
+    def test_raises_as_envbool_error(self):
+        with pytest.raises(EnvBoolError):
+            raise MissingEnvVarError("missing")
+
+    # --- annotated attributes ---
+
+    def test_var_attribute(self):
+        err = MissingEnvVarError("missing")
+        err.var = "MY_VAR"
+        assert err.var == "MY_VAR"
 
 
 class TestConfigError:

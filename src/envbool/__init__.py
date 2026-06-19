@@ -17,6 +17,7 @@ Available names:
     DEFAULT_FALSY         -- built-in falsy set (frozenset)
     EnvBoolError          -- base exception for all envbool errors
     InvalidBoolValueError -- raised in strict mode for unrecognized values
+    MissingEnvVarError    -- raised by envbool(required=True) when a var is unset
     ConfigError           -- raised for malformed or unreadable config files
 """
 # All implementation lives in private underscore-prefixed modules so the public
@@ -27,7 +28,12 @@ from envbool._config import EnvBoolConfig, load_config
 from envbool._core import to_bool
 from envbool._defaults import DEFAULT_FALSY, DEFAULT_TRUTHY
 from envbool._env import envbool
-from envbool.exceptions import ConfigError, EnvBoolError, InvalidBoolValueError
+from envbool.exceptions import (
+    ConfigError,
+    EnvBoolError,
+    InvalidBoolValueError,
+    MissingEnvVarError,
+)
 
 __all__ = [
     "DEFAULT_FALSY",
@@ -36,6 +42,7 @@ __all__ = [
     "EnvBoolConfig",
     "EnvBoolError",
     "InvalidBoolValueError",
+    "MissingEnvVarError",
     "envbool",
     "load_config",
     "to_bool",

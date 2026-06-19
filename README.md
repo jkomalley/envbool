@@ -219,6 +219,7 @@ Set `ENVBOOL_NO_CONFIG=1` to skip config discovery entirely.
 | `DEFAULT_FALSY` | `frozenset` of the built-in falsy strings. |
 | `EnvBoolError` | Base class for every exception the library raises. |
 | `InvalidBoolValueError` | Raised in strict mode for unrecognized values. Also a `ValueError`. |
+| `MissingEnvVarError` | Raised by `envbool(required=True)` when the variable is unset. Also a `KeyError`. |
 | `ConfigError` | Raised when a config file is malformed. |
 
 `envbool()` and `to_bool()` share the same keyword-only options:
@@ -230,6 +231,10 @@ Set `ENVBOOL_NO_CONFIG=1` to skip config discovery entirely.
 | `warn` | `bool \| None` | `None` | Log a warning on unrecognized values (`None` defers to config). |
 | `truthy` / `falsy` | `Iterable[str] \| None` | `None` | **Replace** the effective set. |
 | `extend_truthy` / `extend_falsy` | `Iterable[str] \| None` | `None` | **Extend** the effective set. |
+
+`envbool()` also accepts `required` (`bool`, default `False`): when `True`, a
+variable that is unset raises `MissingEnvVarError` before `default` is applied. A
+variable set to an empty string counts as present and still uses `default`.
 
 ## Advanced topics
 

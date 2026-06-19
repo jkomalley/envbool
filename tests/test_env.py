@@ -7,7 +7,7 @@ import pytest
 from envbool._config import _reset_config
 from envbool._defaults import DEFAULT_FALSY, DEFAULT_TRUTHY
 from envbool._env import envbool
-from envbool.exceptions import InvalidBoolValueError
+from envbool.exceptions import InvalidBoolValueError, MissingEnvVarError
 
 # ---------------------------------------------------------------------------
 # Unset / empty
@@ -34,6 +34,45 @@ class TestEnvBoolUnset:
     def test_whitespace_only_returns_custom_default(self, monkeypatch):
         monkeypatch.setenv("TEST_VAR", "   ")
         assert envbool("TEST_VAR", default=True) is True
+
+
+# ---------------------------------------------------------------------------
+# required=True
+# ---------------------------------------------------------------------------
+
+
+class TestEnvBoolRequired:
+    def test_unset_required_raises(self, monkeypatch):
+        monkeypatch.delenv("TEST_VAR", raising=False)
+        with pytest.raises(MissingEnvVarError):
+            envbool("TEST_VAR", required=True)
+
+    def test_unset_required_raises_before_default_applies(self, monkeypatch):
+        # default is irrelevant for a truly-unset required var -- it raises
+        # rather than falling back to the default value.
+        monkeypatch.delenv("TEST_VAR", raising=False)
+        with pytest.raises(MissingEnvVarError):
+            envbool("TEST_VAR", required=True, default=True)
+
+    def test_error_carries_var_name(self, monkeypatch):
+        monkeypatch.delenv("TEST_VAR", raising=False)
+        with pytest.raises(MissingEnvVarError) as exc_info:
+            envbool("TEST_VAR", required=True)
+        assert exc_info.value.var == "TEST_VAR"
+
+    def test_empty_string_is_not_missing(self, monkeypatch):
+        # Set-but-empty is present, so required does not fire; normal default
+        # handling applies and the value coerces to False.
+        monkeypatch.setenv("TEST_VAR", "")
+        assert envbool("TEST_VAR", required=True) is False
+
+    def test_set_value_coerces_normally(self, monkeypatch):
+        monkeypatch.setenv("TEST_VAR", "true")
+        assert envbool("TEST_VAR", required=True) is True
+
+    def test_required_false_keeps_lenient_unset_behavior(self, monkeypatch):
+        monkeypatch.delenv("TEST_VAR", raising=False)
+        assert envbool("TEST_VAR", required=False) is False
 
 
 # ---------------------------------------------------------------------------
