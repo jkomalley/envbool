@@ -6,7 +6,6 @@ from io import StringIO
 import pytest
 
 from envbool._cli import main
-from envbool._config import _reset_config
 
 
 def run_cli(*args, monkeypatch, stdin_text=None, is_tty=True):
@@ -253,46 +252,6 @@ class TestCLINoInput:
 
 
 # ---------------------------------------------------------------------------
-# Config integration
-# ---------------------------------------------------------------------------
-
-
-class TestCLIConfigIntegration:
-    def test_config_strict_propagates(self, monkeypatch, tmp_path):
-        (tmp_path / "envbool.toml").write_text("strict = true\n")
-        monkeypatch.chdir(tmp_path)
-        _reset_config()
-        monkeypatch.setenv("TEST_VAR", "maybe")
-        code = run_cli("TEST_VAR", monkeypatch=monkeypatch)
-        assert code == 2
-
-    def test_cli_strict_flag_overrides_config_false(self, monkeypatch, tmp_path):
-        (tmp_path / "envbool.toml").write_text("strict = false\n")
-        monkeypatch.chdir(tmp_path)
-        _reset_config()
-        monkeypatch.setenv("TEST_VAR", "maybe")
-        code = run_cli("TEST_VAR", "--strict", monkeypatch=monkeypatch)
-        assert code == 2
-
-    def test_config_warn_propagates(self, monkeypatch, tmp_path, caplog):
-        (tmp_path / "envbool.toml").write_text("warn = true\n")
-        monkeypatch.chdir(tmp_path)
-        _reset_config()
-        monkeypatch.setenv("TEST_VAR", "maybe")
-        with caplog.at_level("WARNING"):
-            run_cli("TEST_VAR", monkeypatch=monkeypatch)
-        assert "maybe" in caplog.text
-
-    def test_config_extend_truthy_propagates(self, monkeypatch, tmp_path):
-        (tmp_path / "envbool.toml").write_text('extend_truthy = ["enabled"]\n')
-        monkeypatch.chdir(tmp_path)
-        _reset_config()
-        monkeypatch.setenv("TEST_VAR", "enabled")
-        code = run_cli("TEST_VAR", monkeypatch=monkeypatch)
-        assert code == 0
-
-
-# ---------------------------------------------------------------------------
 # Custom truthy/falsy value sets (--truthy/--falsy/--extend-truthy/--extend-falsy)
 # ---------------------------------------------------------------------------
 
@@ -360,39 +319,3 @@ class TestCLIValueSets:
             monkeypatch=monkeypatch,
         )
         assert code == 1
-
-
-# ---------------------------------------------------------------------------
-# Malformed config file handling
-# ---------------------------------------------------------------------------
-
-
-class TestCLIConfigError:
-    def test_malformed_config_on_var_lookup_exits_2(
-        self, monkeypatch, tmp_path, capsys
-    ):
-        # A malformed config file in the tree must surface as a clean CLI error
-        # (exit 2, message on stderr), not an uncaught traceback.
-        (tmp_path / "envbool.toml").write_text('strict = "yes"\n')
-        monkeypatch.chdir(tmp_path)
-        # A non-empty value is required: an unset/empty var short-circuits in
-        # to_bool() before config is ever loaded, so it would never hit the error.
-        monkeypatch.setenv("TEST_VAR", "true")
-        _reset_config()
-        code = run_cli("TEST_VAR", monkeypatch=monkeypatch)
-        assert code == 2
-        captured = capsys.readouterr()
-        assert "error" in captured.err.lower()
-        assert "Traceback" not in captured.err
-
-    def test_malformed_config_on_show_config_exits_2(
-        self, monkeypatch, tmp_path, capsys
-    ):
-        (tmp_path / "envbool.toml").write_text('strict = "yes"\n')
-        monkeypatch.chdir(tmp_path)
-        _reset_config()
-        code = run_cli("--show-config", monkeypatch=monkeypatch)
-        assert code == 2
-        captured = capsys.readouterr()
-        assert "error" in captured.err.lower()
-        assert "Traceback" not in captured.err

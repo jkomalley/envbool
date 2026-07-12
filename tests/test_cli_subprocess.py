@@ -18,12 +18,8 @@ from envbool import __main__  # noqa: F401 -- imported so coverage sees the modu
 
 
 def run(*args, env_overrides=None, stdin=None):
-    """Run `python -m envbool ARGS` in a child process; return the CompletedProcess.
-
-    ENVBOOL_NO_CONFIG=1 keeps the run hermetic -- no config file is discovered by
-    walking up from the test's working directory.
-    """
-    env = {**os.environ, "ENVBOOL_NO_CONFIG": "1"}
+    """Run `python -m envbool ARGS` in a child process; return the CompletedProcess."""
+    env = dict(os.environ)
     env.pop("TEST_VAR", None)
     if env_overrides:
         env.update(env_overrides)
