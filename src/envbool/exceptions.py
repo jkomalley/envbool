@@ -56,6 +56,11 @@ class MissingEnvVarError(EnvBoolError, KeyError):
     string is "present" and coerces normally via the caller's default.
     """
 
+    # KeyError.__str__ reprs its argument (e.g. `str(KeyError("x"))` == `"'x'"`),
+    # which would wrap every rendered message in stray quotes. Restore plain
+    # Exception formatting so `str(e)` and CLI/log output read cleanly.
+    __str__ = Exception.__str__
+
     # Set by the raising code after construction (see InvalidBoolValueError for
     # why attributes live here rather than in __init__).
 

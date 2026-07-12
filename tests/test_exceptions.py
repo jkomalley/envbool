@@ -158,6 +158,13 @@ class TestMissingEnvVarError:
         err.var = "MY_VAR"
         assert err.var == "MY_VAR"
 
+    # --- message rendering ---
+
+    def test_str_has_no_extra_quotes(self):
+        """KeyError.__str__ reprs its arg; MissingEnvVarError must not inherit that."""
+        err = MissingEnvVarError("Required environment variable DEBUG is not set")
+        assert str(err) == "Required environment variable DEBUG is not set"
+
 
 class TestConfigError:
     """Raised for malformed config files. Not a ValueError."""
