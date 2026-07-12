@@ -9,7 +9,7 @@ other test modules. They never touch os.environ -- to_bool() is pure.
 from hypothesis import assume, given
 from hypothesis import strategies as st
 
-from envbool import to_bool
+from envbool import reset_defaults, set_defaults, to_bool
 from envbool._defaults import DEFAULT_FALSY, DEFAULT_TRUTHY
 
 # Printable ASCII keeps the case-folding property free of unicode edge cases
@@ -80,3 +80,18 @@ def test_every_custom_truthy_token_coerces_true(tokens):
     assume(all(t.strip().lower() for t in tokens))  # blanks return default instead
     for token in tokens:
         assert to_bool(token, truthy=tokens) is True
+
+
+@given(st.lists(_ASCII_PRINTABLE, min_size=1, max_size=5))
+def test_call_site_truthy_overrides_set_defaults_truthy(tokens):
+    # Call-site truthy= must win over whatever set_defaults() last configured,
+    # matching the documented precedence: call-site args > set_defaults() >
+    # built-ins. try/finally rather than the conftest fixture because hypothesis
+    # runs many examples inside a single test invocation.
+    assume(all(t.strip().lower() for t in tokens))
+    try:
+        set_defaults(truthy=["from-set-defaults"])
+        for token in tokens:
+            assert to_bool(token, truthy=tokens) is True
+    finally:
+        reset_defaults()

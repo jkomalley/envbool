@@ -11,8 +11,10 @@ For except clauses, envbool.exceptions is also importable by name:
 Available names:
     envbool()             -- read an env var and coerce to bool (primary API)
     to_bool()             -- coerce an arbitrary string to bool (no os.environ)
-    load_config()         -- inspect the process-level config
-    EnvBoolConfig         -- frozen dataclass returned by load_config()
+    set_defaults()        -- set process-level strict/warn/truthy/falsy defaults
+    get_defaults()        -- inspect the active process-level Defaults
+    reset_defaults()      -- restore built-in defaults (for test fixtures)
+    Defaults              -- frozen dataclass returned by get_defaults()
     DEFAULT_TRUTHY        -- built-in truthy set (frozenset)
     DEFAULT_FALSY         -- built-in falsy set (frozenset)
     EnvBoolError          -- base exception for all envbool errors
@@ -23,9 +25,15 @@ Available names:
 # surface can be reshaped without breaking imports. Do not import from _core,
 # _env, _config, _cli, or _defaults directly.
 
-from envbool._config import EnvBoolConfig, load_config
 from envbool._core import to_bool
-from envbool._defaults import DEFAULT_FALSY, DEFAULT_TRUTHY
+from envbool._defaults import (
+    DEFAULT_FALSY,
+    DEFAULT_TRUTHY,
+    Defaults,
+    get_defaults,
+    reset_defaults,
+    set_defaults,
+)
 from envbool._env import envbool
 from envbool.exceptions import (
     EnvBoolError,
@@ -36,11 +44,13 @@ from envbool.exceptions import (
 __all__ = [
     "DEFAULT_FALSY",
     "DEFAULT_TRUTHY",
-    "EnvBoolConfig",
+    "Defaults",
     "EnvBoolError",
     "InvalidBoolValueError",
     "MissingEnvVarError",
     "envbool",
-    "load_config",
+    "get_defaults",
+    "reset_defaults",
+    "set_defaults",
     "to_bool",
 ]

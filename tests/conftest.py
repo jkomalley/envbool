@@ -1,15 +1,14 @@
 import pytest
 
-from envbool._config import _reset_config
+from envbool import reset_defaults
 
 
 @pytest.fixture(autouse=True)
-def _reset_envbool_config():
-    """Reset the envbool config cache after each test.
+def _reset_envbool_defaults():
+    """Reset process-level defaults after each test.
 
     Runs automatically for every test (autouse=True). Without this, a test
-    that mutates the process-level config would leak state into subsequent
-    tests instead of leaving them a fresh, default-built EnvBoolConfig.
+    that calls set_defaults() would leak its overrides into subsequent tests.
     """
     yield
-    _reset_config()
+    reset_defaults()

@@ -39,6 +39,8 @@ CACHE   = envbool("CACHE")
 - **Always returns `bool`.** No `None`, no surprises in your type signatures.
 - **Customizable value sets.** Replace or extend the truthy/falsy words your
   environment uses.
+- **Process-level defaults.** Call `set_defaults()` once at startup instead
+  of threading options through every call site.
 - **A CLI for shell scripts.** Exit codes map to truthiness, so it drops
   straight into `&&` / `||` chains.
 - **Zero ceremony.** Zero dependencies, fully typed, Python 3.11+.
@@ -120,6 +122,37 @@ to_bool("0")                   # False
 to_bool("maybe", strict=True)  # raises InvalidBoolValueError
 ```
 
+### Process-level defaults
+
+Set policy once at startup instead of threading `strict=`/`extend_truthy=`
+through every call site:
+
+```python
+import envbool
+
+envbool.set_defaults(strict=True, extend_truthy=["enabled"])
+
+envbool.envbool("DEBUG")  # now raises on unrecognized values by default
+```
+
+`set_defaults()` replaces the process-level defaults **from the built-ins**,
+not from whatever a previous `set_defaults()` call left in place — call it
+once. Call-site arguments (`envbool("X", strict=False)`) still override
+whatever `set_defaults()` configured:
+
+```
+built-in defaults  →  set_defaults()  →  function arguments / CLI flags
+```
+
+`get_defaults()` returns the active `Defaults` (a frozen dataclass: `strict`,
+`warn`, `effective_truthy`, `effective_falsy`) for inspection.
+`reset_defaults()` restores the built-ins — call it in a test fixture (see
+[Testing code that uses envbool](#testing-code-that-uses-envbool)).
+
+> Through 0.3.x, envbool read TOML config files (`envbool.toml`,
+> `[tool.envbool]`). 0.4.0 removed them in favor of `set_defaults()` — see
+> `CHANGELOG.md` for the rationale and migration note.
+
 ## Command-line interface
 
 The `envbool` command exits `0` for truthy, `1` for falsy, and `2` on error, so
@@ -173,7 +206,8 @@ options:
 A few rules worth knowing:
 
 - Omitting `--strict` / `--warn` uses the built-in defaults (lenient, no
-  warnings).
+  warnings). `set_defaults()` is a library-level concern — the one-shot CLI
+  process doesn't read it.
 - `VAR_NAME` and `--value` are mutually exclusive.
 - `--required` only applies to `VAR_NAME`; combining it with `--value` or
   giving it no `VAR_NAME` at all is a usage error.
@@ -186,8 +220,10 @@ A few rules worth knowing:
 | --- | --- |
 | `envbool(var, **opts)` | Read an environment variable and return `bool`. |
 | `to_bool(value, **opts)` | Coerce a string to `bool`. |
-| `load_config()` | Return the active `EnvBoolConfig` (built from hardcoded defaults). |
-| `EnvBoolConfig` | Frozen dataclass: `strict`, `warn`, `effective_truthy`, `effective_falsy`. |
+| `set_defaults(**opts)` | Set process-level strict/warn/truthy/falsy defaults, replacing the built-ins. |
+| `get_defaults()` | Return the active `Defaults`. |
+| `reset_defaults()` | Restore built-in defaults. |
+| `Defaults` | Frozen dataclass: `strict`, `warn`, `effective_truthy`, `effective_falsy`. |
 | `DEFAULT_TRUTHY` | `frozenset` of the built-in truthy strings. |
 | `DEFAULT_FALSY` | `frozenset` of the built-in falsy strings. |
 | `EnvBoolError` | Base class for every exception the library raises. |
@@ -199,8 +235,8 @@ A few rules worth knowing:
 | Option | Type | Default | Meaning |
 | --- | --- | --- | --- |
 | `default` | `bool` | `False` | Returned for unset/empty input. |
-| `strict` | `bool \| None` | `None` | Raise on unrecognized values (`None` defers to config). |
-| `warn` | `bool \| None` | `None` | Log a warning on unrecognized values (`None` defers to config). |
+| `strict` | `bool \| None` | `None` | Raise on unrecognized values (`None` defers to `set_defaults()`). |
+| `warn` | `bool \| None` | `None` | Log a warning on unrecognized values (`None` defers to `set_defaults()`). |
 | `truthy` / `falsy` | `Iterable[str] \| None` | `None` | **Replace** the effective set. |
 | `extend_truthy` / `extend_falsy` | `Iterable[str] \| None` | `None` | **Extend** the effective set. |
 
@@ -274,23 +310,19 @@ else:
 
 ### Testing code that uses envbool
 
-`envbool` loads its config file once and caches it for the process lifetime. If
-your tests create temporary config files, clear that cache between them with an
-autouse fixture:
+If your tests call `set_defaults()`, reset it between tests with an autouse
+fixture so overrides don't leak across the suite:
 
 ```python
 # conftest.py
 import pytest
-from envbool._config import _reset_config
+from envbool import reset_defaults
 
 @pytest.fixture(autouse=True)
-def _reset_envbool_config():
+def _reset_envbool_defaults():
     yield
-    _reset_config()
+    reset_defaults()
 ```
-
-`_reset_config()` is private but stable and exists for exactly this purpose; it
-clears the cache under a lock, so it is safe to call from any thread.
 
 ## Contributing
 

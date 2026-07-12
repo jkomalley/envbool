@@ -9,18 +9,21 @@ Private surface (used by _env.py and tests):
     _resolve()      -- compute effective truthy/falsy sets from layered inputs
 """
 # This module has no knowledge of os.environ -- that lives in _env.py. It does
-# consult the config cache (_get_config) so that strict=None/warn=None defer to
-# the loaded config file rather than always defaulting to False.
-# Import order matters: _config.py imports _defaults (not _core), so _core.py
-# can safely import from _config.py without creating a circular dependency.
+# consult get_defaults() from _defaults.py so that strict=None/warn=None defer
+# to the process-level defaults (set_defaults()) rather than always defaulting
+# to False.
 
 __all__ = ["to_bool"]
 
 import logging
 from collections.abc import Iterable
 
-from envbool._config import _get_config
-from envbool._defaults import DEFAULT_FALSY, DEFAULT_TRUTHY
+from envbool._defaults import (
+    DEFAULT_FALSY,
+    DEFAULT_TRUTHY,
+    _apply_replace_or_extend,
+    get_defaults,
+)
 from envbool.exceptions import InvalidBoolValueError
 
 # Module-level logger -- attributed to "envbool._core" so callers can filter it
@@ -47,9 +50,10 @@ def to_bool(
     Args:
         value: The string to coerce.
         default: Returned when value is empty or unset.
-        strict: Raise on unrecognized values. None defers to config (default False).
-        warn: Log a warning on unrecognized values. None defers to config
-            (default False).
+        strict: Raise on unrecognized values. None defers to process-level
+            defaults (set_defaults()) (default False).
+        warn: Log a warning on unrecognized values. None defers to
+            process-level defaults (set_defaults()) (default False).
         truthy: Replaces the effective truthy set.
         falsy: Replaces the effective falsy set.
         extend_truthy: Extends the effective truthy set.
@@ -69,15 +73,17 @@ def to_bool(
     if not normalized:
         return default
 
-    # Load config once per process (cached after first call -- no per-call disk I/O).
-    # _resolve then applies the full three-level precedence chain:
+    # Read the process-level defaults (set once via set_defaults(), or the
+    # built-ins if never called). _resolve then applies the full three-level
+    # precedence chain:
     #   hardcoded defaults (_defaults.py)
-    #   -> config file (effective_truthy/effective_falsy already resolved there)
+    #   -> process-level defaults (effective_truthy/effective_falsy already
+    #      resolved there by set_defaults())
     #   -> call-site args (truthy/extend_truthy/falsy/extend_falsy)
-    config = _get_config()
+    defaults = get_defaults()
     effective_truthy, effective_falsy = _resolve(
-        config_truthy=config.effective_truthy,
-        config_falsy=config.effective_falsy,
+        config_truthy=defaults.effective_truthy,
+        config_falsy=defaults.effective_falsy,
         truthy=truthy,
         falsy=falsy,
         extend_truthy=extend_truthy,
@@ -100,10 +106,10 @@ def to_bool(
     if normalized in effective_falsy:
         return False
 
-    # Three-state logic: True/False at the call site override the config value;
-    # None defers to whatever the config file says (which defaults to False if no
-    # config file exists).
-    effective_strict = strict if strict is not None else config.strict
+    # Three-state logic: True/False at the call site override the process-level
+    # default; None defers to whatever set_defaults() last set (which defaults
+    # to False if set_defaults() was never called).
+    effective_strict = strict if strict is not None else defaults.strict
     if effective_strict:
         truthy_list = ", ".join(sorted(effective_truthy))
         falsy_list = ", ".join(sorted(effective_falsy))
@@ -128,7 +134,7 @@ def to_bool(
         err.falsy = effective_falsy
         raise err
 
-    effective_warn = warn if warn is not None else config.warn
+    effective_warn = warn if warn is not None else defaults.warn
     if effective_warn:
         _logger.warning("Unrecognized boolean value: %r", normalized)
 
@@ -138,41 +144,6 @@ def to_bool(
 
 
 # Private API
-
-
-def _normalize_set(values: Iterable[str]) -> frozenset[str]:
-    """Strip and lowercase values so they match to_bool()'s normalized input."""
-    return frozenset(v.strip().lower() for v in values)
-
-
-def _apply_replace_or_extend(
-    base: frozenset[str],
-    replace: Iterable[str] | None,
-    extend: Iterable[str] | None,
-) -> frozenset[str]:
-    """Resolve a value set using replace/extend/fall-back-to-base precedence.
-
-    Shared by _resolve() (call-site truthy/falsy args) and _config.py's
-    _parse_config() (TOML truthy/falsy keys) since both layer their inputs
-    on top of a base set using the same ruff select/extend-select pattern:
-        replace -- full replacement; caller owns the entire set
-        extend  -- additive; merges on top of base
-        neither -- use base as-is
-    replace takes precedence over extend; both cannot apply at once.
-
-    Args:
-        base: The starting set to fall back to or extend.
-        replace: If not None, fully replaces base (normalized).
-        extend: If not None and replace is None, merged on top of base.
-
-    Returns:
-        The resolved, normalized frozenset.
-    """
-    if replace is not None:
-        return _normalize_set(replace)
-    if extend is not None:
-        return base | _normalize_set(extend)
-    return base
 
 
 def _resolve(

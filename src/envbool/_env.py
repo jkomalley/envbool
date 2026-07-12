@@ -6,7 +6,7 @@ Public surface:
 # This is the only layer in the package that touches os.environ. The split
 # between _env.py and _core.py keeps os.environ access isolated here so that
 # to_bool() can be tested without monkeypatching the environment.
-# Delegation chain: envbool() -> to_bool() -> _resolve() (+ _get_config())
+# Delegation chain: envbool() -> to_bool() -> _resolve() (+ get_defaults())
 
 __all__ = ["envbool"]
 
@@ -37,9 +37,10 @@ def envbool(
         required: When True, raise if the variable is not set at all. A truly
             unset var raises before `default` is considered; a var set to an
             empty string is "present" and still coerces via `default`.
-        strict: Raise on unrecognized values. None defers to config (default False).
-        warn: Log a warning on unrecognized values. None defers to config
-            (default False).
+        strict: Raise on unrecognized values. None defers to process-level
+            defaults (set_defaults()) (default False).
+        warn: Log a warning on unrecognized values. None defers to
+            process-level defaults (set_defaults()) (default False).
         truthy: Replaces the effective truthy set.
         falsy: Replaces the effective falsy set.
         extend_truthy: Extends the effective truthy set.
