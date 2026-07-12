@@ -18,7 +18,6 @@ Available names:
     EnvBoolError          -- base exception for all envbool errors
     InvalidBoolValueError -- raised in strict mode for unrecognized values
     MissingEnvVarError    -- raised by envbool(required=True) when a var is unset
-    ConfigError           -- raised for malformed or unreadable config files
 """
 # All implementation lives in private underscore-prefixed modules so the public
 # surface can be reshaped without breaking imports. Do not import from _core,
@@ -29,7 +28,6 @@ from envbool._core import to_bool
 from envbool._defaults import DEFAULT_FALSY, DEFAULT_TRUTHY
 from envbool._env import envbool
 from envbool.exceptions import (
-    ConfigError,
     EnvBoolError,
     InvalidBoolValueError,
     MissingEnvVarError,
@@ -38,7 +36,6 @@ from envbool.exceptions import (
 __all__ = [
     "DEFAULT_FALSY",
     "DEFAULT_TRUTHY",
-    "ConfigError",
     "EnvBoolConfig",
     "EnvBoolError",
     "InvalidBoolValueError",

@@ -9,10 +9,7 @@ Hierarchy:
     EnvBoolError(Exception)
         InvalidBoolValueError(EnvBoolError, ValueError)
         MissingEnvVarError(EnvBoolError, KeyError)
-        ConfigError(EnvBoolError)
 """
-
-from pathlib import Path
 
 
 class EnvBoolError(Exception):
@@ -66,14 +63,3 @@ class MissingEnvVarError(EnvBoolError, KeyError):
 
     # Name of the environment variable that was required but not set.
     var: str
-
-
-class ConfigError(EnvBoolError):
-    """Raised when a config file is malformed or contains invalid values.
-
-    Not a ValueError -- config problems are distinct from bad boolean values
-    and should not be caught by generic except ValueError handlers.
-    """
-
-    # Path to the config file that caused the error, for diagnostic messages.
-    path: Path
