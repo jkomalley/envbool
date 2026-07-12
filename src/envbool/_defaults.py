@@ -106,9 +106,7 @@ def get_defaults() -> Defaults:
     return _cache.value
 
 
-def _validated_tuple(
-    name: str, values: Iterable[str] | None
-) -> tuple[str, ...] | None:
+def _validated_tuple(name: str, values: Iterable[str] | None) -> tuple[str, ...] | None:
     """Materialize an Iterable[str] argument once, validating every member.
 
     Iterables (e.g. generators) can only be consumed once; materializing here
