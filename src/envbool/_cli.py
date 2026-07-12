@@ -181,6 +181,12 @@ def _coerce_from_source(
     if args.required and args.value is not None:
         parser.error("--required and --value are mutually exclusive")
 
+    # --required only makes sense against an env var lookup; reject it whenever
+    # there's no VAR_NAME to be "required" -- covers both the stdin-pipe path and
+    # the case where neither --value nor VAR_NAME nor stdin was given.
+    if args.required and args.var is None:
+        parser.error("--required requires VAR_NAME")
+
     if args.value is not None:
         return to_bool(
             args.value,
@@ -209,13 +215,17 @@ def _coerce_from_source(
                 file=sys.stderr,
             )
             sys.exit(2)
-        return to_bool(
-            raw,
-            strict=args.strict,
-            warn=args.warn,
-            default=args.default,
-            **value_set_kwargs,
-        )
+        # Empty stdin (e.g. `envbool </dev/null` under cron/CI with a forgotten
+        # VAR_NAME) is "no source applies", not "the value is empty" -- fall
+        # through to the usage/exit-2 path below rather than silently coercing.
+        if raw:
+            return to_bool(
+                raw,
+                strict=args.strict,
+                warn=args.warn,
+                default=args.default,
+                **value_set_kwargs,
+            )
 
     parser.print_usage(sys.stderr)
     sys.exit(2)
@@ -239,11 +249,12 @@ def main() -> None:
                 or args.value is not None
                 or args.print_result
                 or args.default
+                or args.required
             )
             if conflicting:
                 parser.error(
                     "--show-config is mutually exclusive with VAR_NAME, --value, "
-                    "--print, and --default"
+                    "--print, --default, and --required"
                 )
             _print_config(args)
             sys.exit(0)

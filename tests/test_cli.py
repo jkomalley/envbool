@@ -93,6 +93,16 @@ class TestCLIRequiredFlag:
         assert code == 2
         assert "mutually exclusive" in capsys.readouterr().err
 
+    def test_required_with_stdin_is_rejected(self, monkeypatch, capsys):
+        code = run_cli("--required", monkeypatch=monkeypatch, stdin_text="true\n")
+        assert code == 2
+        assert "requires VAR_NAME" in capsys.readouterr().err
+
+    def test_required_with_no_source_is_rejected(self, monkeypatch, capsys):
+        code = run_cli("--required", monkeypatch=monkeypatch)
+        assert code == 2
+        assert "requires VAR_NAME" in capsys.readouterr().err
+
 
 # ---------------------------------------------------------------------------
 # --warn flag
@@ -214,6 +224,18 @@ class TestCLIStdin:
     def test_stdin_unrecognized_strict_exits_2(self, monkeypatch):
         code = run_cli("--strict", monkeypatch=monkeypatch, stdin_text="maybe\n")
         assert code == 2
+
+    def test_empty_stdin_exits_2_with_usage(self, monkeypatch, capsys):
+        code = run_cli(monkeypatch=monkeypatch, stdin_text="")
+        assert code == 2
+        captured = capsys.readouterr()
+        assert "usage" in captured.err.lower()
+
+    def test_whitespace_only_stdin_exits_2_with_usage(self, monkeypatch, capsys):
+        code = run_cli(monkeypatch=monkeypatch, stdin_text="   \n")
+        assert code == 2
+        captured = capsys.readouterr()
+        assert "usage" in captured.err.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -421,6 +443,11 @@ class TestCLIShowConfig:
 
     def test_show_config_with_default_exits_2(self, monkeypatch, capsys):
         code = run_cli("--show-config", "--default", monkeypatch=monkeypatch)
+        assert code == 2
+        assert "mutually exclusive" in capsys.readouterr().err
+
+    def test_show_config_with_required_exits_2(self, monkeypatch, capsys):
+        code = run_cli("--show-config", "--required", monkeypatch=monkeypatch)
         assert code == 2
         assert "mutually exclusive" in capsys.readouterr().err
 
