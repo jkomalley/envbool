@@ -39,18 +39,15 @@ CACHE   = envbool("CACHE")
 - **Always returns `bool`.** No `None`, no surprises in your type signatures.
 - **Customizable value sets.** Replace or extend the truthy/falsy words your
   environment uses.
-- **Config files.** Share defaults across a project via `envbool.toml` or
-  `[tool.envbool]` in `pyproject.toml`.
 - **A CLI for shell scripts.** Exit codes map to truthiness, so it drops
   straight into `&&` / `||` chains.
-- **Zero ceremony.** One dependency, fully typed, Python 3.11+.
+- **Zero ceremony.** Zero dependencies, fully typed, Python 3.11+.
 
 ## Contents
 
 - [Installation](#installation)
 - [Usage](#usage)
 - [Command-line interface](#command-line-interface)
-- [Configuration](#configuration)
 - [API reference](#api-reference)
 - [Advanced topics](#advanced-topics)
 - [Contributing](#contributing)
@@ -148,9 +145,9 @@ in that order of priority.
 
 ```console
 $ envbool --help
-usage: envbool [-h] [--value TEXT] [--strict] [--warn] [--default] [--print]
-               [--truthy VALUE] [--falsy VALUE] [--extend-truthy VALUE]
-               [--extend-falsy VALUE] [--show-config]
+usage: envbool [-h] [--value TEXT] [--strict] [--warn] [--default]
+               [--required] [--print] [--truthy VALUE] [--falsy VALUE]
+               [--extend-truthy VALUE] [--extend-falsy VALUE]
                [VAR_NAME]
 
 Coerce an environment variable or string to a boolean.
@@ -164,48 +161,24 @@ options:
   --strict, -s          Raise error on unrecognized values.
   --warn                Log a warning on unrecognized values.
   --default, -d         Default value if unset/empty (default: false).
+  --required, -r        Exit 2 if VAR_NAME is not set in the environment.
   --print, -p           Print "true" or "false" instead of using exit codes.
   --truthy VALUE        Replace the truthy set with VALUE (repeatable).
   --falsy VALUE         Replace the falsy set with VALUE (repeatable).
   --extend-truthy VALUE
                         Add VALUE to the truthy set (repeatable).
   --extend-falsy VALUE  Add VALUE to the falsy set (repeatable).
-  --show-config         Print the effective configuration and exit.
 ```
 
 A few rules worth knowing:
 
-- Omitting `--strict` / `--warn` defers to the config file setting.
+- Omitting `--strict` / `--warn` uses the built-in defaults (lenient, no
+  warnings).
 - `VAR_NAME` and `--value` are mutually exclusive.
-- `--show-config` prints the effective configuration and exits. It cannot be
-  combined with `VAR_NAME`, `--value`, `--print`, or `--default`, but it *can*
-  take the value-set flags to preview overrides.
-- With no `VAR_NAME`, `--value`, or piped stdin, the CLI prints usage and exits `2`.
-
-## Configuration
-
-Share defaults across a project by dropping an `envbool.toml` at its root (or a
-`[tool.envbool]` table in `pyproject.toml`):
-
-```toml
-# envbool.toml
-strict = true
-extend_truthy = ["enabled"]
-extend_falsy  = ["disabled"]
-```
-
-`envbool` walks up from the current directory to find the nearest project config,
-then falls back to a user-level `config.toml` in the platform's standard config
-directory (`~/.config/envbool/` on Linux, `~/Library/Application Support/envbool/`
-on macOS), resolved via [platformdirs](https://pypi.org/project/platformdirs/).
-
-Values resolve in three layers, each overriding the last:
-
-```
-built-in defaults  →  config file  →  function arguments / CLI flags
-```
-
-Set `ENVBOOL_NO_CONFIG=1` to skip config discovery entirely.
+- `--required` only applies to `VAR_NAME`; combining it with `--value` or
+  giving it no `VAR_NAME` at all is a usage error.
+- With no `VAR_NAME`, `--value`, or non-empty piped stdin, the CLI prints
+  usage and exits `2`.
 
 ## API reference
 
@@ -213,15 +186,13 @@ Set `ENVBOOL_NO_CONFIG=1` to skip config discovery entirely.
 | --- | --- |
 | `envbool(var, **opts)` | Read an environment variable and return `bool`. |
 | `to_bool(value, **opts)` | Coerce a string to `bool`. |
-| `load_config()` | Load and return the active `EnvBoolConfig` (cached). |
-| `reload_config()` | Discard the cache, re-read the config file, and return the fresh `EnvBoolConfig`. |
-| `EnvBoolConfig` | Frozen dataclass: `strict`, `warn`, `effective_truthy`, `effective_falsy`, `source_path`. |
+| `load_config()` | Return the active `EnvBoolConfig` (built from hardcoded defaults). |
+| `EnvBoolConfig` | Frozen dataclass: `strict`, `warn`, `effective_truthy`, `effective_falsy`. |
 | `DEFAULT_TRUTHY` | `frozenset` of the built-in truthy strings. |
 | `DEFAULT_FALSY` | `frozenset` of the built-in falsy strings. |
 | `EnvBoolError` | Base class for every exception the library raises. |
 | `InvalidBoolValueError` | Raised in strict mode for unrecognized values. Also a `ValueError`. |
 | `MissingEnvVarError` | Raised by `envbool(required=True)` when the variable is unset. Also a `KeyError`. |
-| `ConfigError` | Raised when a config file is malformed. |
 
 `envbool()` and `to_bool()` share the same keyword-only options:
 
@@ -266,10 +237,6 @@ InvalidBoolValueError: Invalid boolean value for MY_VAR: 'maybe'
   Expected falsy:  0, false, no, off
 ```
 
-`ConfigError` is raised when a config file is found but malformed (for example,
-`strict = "yes"` instead of `strict = true`). It carries the offending path on
-`e.path`.
-
 ### Logging
 
 `envbool` logs through the standard `logging` module under the `"envbool"`
@@ -285,7 +252,6 @@ logging.getLogger("envbool").addHandler(logging.StreamHandler())
 
 | Level | When |
 | --- | --- |
-| `DEBUG` | A config file was discovered and loaded, or none was found. |
 | `WARNING` | An unrecognized value fell through in lenient mode (only when `warn=True`). |
 | `WARNING` | The truthy and falsy sets overlap (truthy wins). |
 

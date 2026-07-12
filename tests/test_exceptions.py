@@ -5,12 +5,9 @@ attributes. Integration-level tests (verifying exceptions are raised with
 correct attributes) belong in the modules that raise them (core, config).
 """
 
-from pathlib import Path
-
 import pytest
 
 from envbool.exceptions import (
-    ConfigError,
     EnvBoolError,
     InvalidBoolValueError,
     MissingEnvVarError,
@@ -50,9 +47,6 @@ class TestInvalidBoolValueError:
 
     def test_is_value_error(self):
         assert issubclass(InvalidBoolValueError, ValueError)
-
-    def test_not_config_error(self):
-        assert not issubclass(InvalidBoolValueError, ConfigError)
 
     def test_mro_order(self):
         """EnvBoolError should appear before ValueError in the MRO."""
@@ -164,43 +158,3 @@ class TestMissingEnvVarError:
         """KeyError.__str__ reprs its arg; MissingEnvVarError must not inherit that."""
         err = MissingEnvVarError("Required environment variable DEBUG is not set")
         assert str(err) == "Required environment variable DEBUG is not set"
-
-
-class TestConfigError:
-    """Raised for malformed config files. Not a ValueError."""
-
-    # --- inheritance ---
-
-    def test_is_envbool_error(self):
-        assert issubclass(ConfigError, EnvBoolError)
-
-    def test_not_value_error(self):
-        assert not issubclass(ConfigError, ValueError)
-
-    def test_not_invalid_bool_value_error(self):
-        assert not issubclass(ConfigError, InvalidBoolValueError)
-
-    # --- raises as parent type ---
-
-    def test_raises_as_envbool_error(self):
-        with pytest.raises(EnvBoolError):
-            raise ConfigError("bad config")
-
-    # --- message ---
-
-    def test_instantiate_with_message(self):
-        err = ConfigError("invalid toml")
-        assert str(err) == "invalid toml"
-
-    # --- annotated attributes ---
-
-    def test_path_attribute(self, tmp_path):
-        p = tmp_path / "envbool.toml"
-        err = ConfigError("bad config")
-        err.path = p
-        assert err.path == p
-
-    def test_path_attribute_relative(self):
-        err = ConfigError("bad config")
-        err.path = Path("pyproject.toml")
-        assert err.path == Path("pyproject.toml")

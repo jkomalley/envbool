@@ -4,7 +4,6 @@ import logging
 
 import pytest
 
-from envbool._config import _reset_config
 from envbool._defaults import DEFAULT_FALSY, DEFAULT_TRUTHY
 from envbool._env import envbool
 from envbool.exceptions import InvalidBoolValueError, MissingEnvVarError
@@ -147,21 +146,6 @@ class TestEnvBoolStrict:
         monkeypatch.setenv("TEST_VAR", "maybe")
         assert envbool("TEST_VAR", strict=None) is False
 
-    def test_strict_none_defers_to_config(self, monkeypatch, tmp_path):
-        (tmp_path / "envbool.toml").write_text("strict = true\n")
-        monkeypatch.chdir(tmp_path)
-        _reset_config()
-        monkeypatch.setenv("TEST_VAR", "maybe")
-        with pytest.raises(InvalidBoolValueError):
-            envbool("TEST_VAR", strict=None)
-
-    def test_strict_false_overrides_config(self, monkeypatch, tmp_path):
-        (tmp_path / "envbool.toml").write_text("strict = true\n")
-        monkeypatch.chdir(tmp_path)
-        _reset_config()
-        monkeypatch.setenv("TEST_VAR", "maybe")
-        assert envbool("TEST_VAR", strict=False) is False
-
     def test_recognized_truthy_does_not_raise_in_strict(self, monkeypatch):
         monkeypatch.setenv("TEST_VAR", "true")
         assert envbool("TEST_VAR", strict=True) is True
@@ -188,15 +172,6 @@ class TestEnvBoolWarn:
         with caplog.at_level(logging.WARNING, logger="envbool._core"):
             envbool("TEST_VAR", warn=False)
         assert not any("maybe" in r.message for r in caplog.records)
-
-    def test_warn_none_defers_to_config(self, monkeypatch, tmp_path, caplog):
-        (tmp_path / "envbool.toml").write_text("warn = true\n")
-        monkeypatch.chdir(tmp_path)
-        _reset_config()
-        monkeypatch.setenv("TEST_VAR", "maybe")
-        with caplog.at_level(logging.WARNING, logger="envbool._core"):
-            envbool("TEST_VAR", warn=None)
-        assert any("maybe" in r.message for r in caplog.records)
 
 
 # ---------------------------------------------------------------------------

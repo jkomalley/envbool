@@ -137,9 +137,6 @@ wheels = [
 name = "envbool"
 version = "0.3.0"
 source = { editable = "." }
-dependencies = [
-    { name = "platformdirs" },
-]
 
 [package.dev-dependencies]
 dev = [
@@ -152,7 +149,6 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "platformdirs", specifier = ">=4.9.6" }]
 
 [package.metadata.requires-dev]
 dev = [

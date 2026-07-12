@@ -5,11 +5,11 @@ from envbool._config import _reset_config
 
 @pytest.fixture(autouse=True)
 def _reset_envbool_config():
-    """Clear the envbool config cache before each test.
+    """Reset the envbool config cache after each test.
 
-    Runs automatically for every test (autouse=True). Without this, a test that
-    triggers config loading would pollute the global cache and cause subsequent
-    tests to see stale config rather than re-discovering from their own tmp_path.
+    Runs automatically for every test (autouse=True). Without this, a test
+    that mutates the process-level config would leak state into subsequent
+    tests instead of leaving them a fresh, default-built EnvBoolConfig.
     """
     yield
     _reset_config()
