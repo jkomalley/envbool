@@ -215,13 +215,17 @@ def _coerce_from_source(
                 file=sys.stderr,
             )
             sys.exit(2)
-        return to_bool(
-            raw,
-            strict=args.strict,
-            warn=args.warn,
-            default=args.default,
-            **value_set_kwargs,
-        )
+        # Empty stdin (e.g. `envbool </dev/null` under cron/CI with a forgotten
+        # VAR_NAME) is "no source applies", not "the value is empty" -- fall
+        # through to the usage/exit-2 path below rather than silently coercing.
+        if raw:
+            return to_bool(
+                raw,
+                strict=args.strict,
+                warn=args.warn,
+                default=args.default,
+                **value_set_kwargs,
+            )
 
     parser.print_usage(sys.stderr)
     sys.exit(2)

@@ -225,6 +225,18 @@ class TestCLIStdin:
         code = run_cli("--strict", monkeypatch=monkeypatch, stdin_text="maybe\n")
         assert code == 2
 
+    def test_empty_stdin_exits_2_with_usage(self, monkeypatch, capsys):
+        code = run_cli(monkeypatch=monkeypatch, stdin_text="")
+        assert code == 2
+        captured = capsys.readouterr()
+        assert "usage" in captured.err.lower()
+
+    def test_whitespace_only_stdin_exits_2_with_usage(self, monkeypatch, capsys):
+        code = run_cli(monkeypatch=monkeypatch, stdin_text="   \n")
+        assert code == 2
+        captured = capsys.readouterr()
+        assert "usage" in captured.err.lower()
+
 
 # ---------------------------------------------------------------------------
 # No input (TTY, no args)
