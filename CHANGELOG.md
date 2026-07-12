@@ -5,7 +5,60 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.0] - YYYY-MM-DD
+
+### Removed (breaking)
+
+- Config file discovery: `envbool.toml`, `[tool.envbool]` in `pyproject.toml`,
+  and the user-level `config.toml` fallback. File discovery made `to_bool()`
+  non-deterministic across launch directories, added hidden filesystem I/O to
+  a pure-looking call, and let any ancestor directory's config silently
+  redefine truthy/falsy semantics for a process that never opted in.
+- `ConfigError`, `--show-config`, `reload_config()`, `ENVBOOL_NO_CONFIG`.
+- `EnvBoolConfig` and `load_config()` — replaced by `Defaults` and
+  `get_defaults()` (see Added, below).
+- The `platformdirs` runtime dependency. `envbool` is now zero-dependency.
+
+### Added
+
+- `set_defaults(**opts)`: set process-level `strict` / `warn` / `truthy` /
+  `falsy` / `extend_truthy` / `extend_falsy` defaults once at application
+  startup — in-memory, no disk I/O. Replaces config files as the way to share
+  policy across call sites. Each call rebuilds from the built-ins (it does
+  not merge with a previous call).
+- `get_defaults()`: inspect the active `Defaults`.
+- `reset_defaults()`: restore built-in defaults (for test fixtures).
+- `Defaults`: frozen dataclass returned by `get_defaults()`.
+
+### Fixed
+
+- `MissingEnvVarError.__str__` no longer wraps its message in stray quotes
+  (an artifact of inheriting from `KeyError`).
+- `--required` now rejects usage when there's no `VAR_NAME` to require
+  (previously silently ignored on the stdin and `--show-config` paths).
+- Empty non-TTY stdin (e.g. `envbool </dev/null` with a forgotten `VAR_NAME`
+  under cron/CI) now prints usage and exits `2`, instead of silently coercing
+  `""` to `default` and exiting `1`.
+
+### Migration
+
+Delete any `envbool.toml` file or `[tool.envbool]` section and call
+`set_defaults()` once at application startup instead:
+
+```toml
+# envbool.toml (delete this file)
+strict = true
+extend_truthy = ["enabled"]
+```
+
+```python
+# equivalent, at application startup
+import envbool
+envbool.set_defaults(strict=True, extend_truthy=["enabled"])
+```
+
+`ENVBOOL_NO_CONFIG=1` is no longer needed and no longer does anything —
+there is no config discovery left to disable.
 
 ## [0.3.0] - 2026-06-18
 
@@ -81,7 +134,7 @@ Initial release.
 - CLI with exit-code semantics (`0` truthy, `1` falsy) and a `--print` flag.
 - TOML config support (`envbool.toml` or `[tool.envbool]` in `pyproject.toml`).
 
-[Unreleased]: https://github.com/jkomalley/envbool/compare/v0.3.0...HEAD
+[0.4.0]: https://github.com/jkomalley/envbool/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/jkomalley/envbool/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/jkomalley/envbool/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/jkomalley/envbool/compare/v0.1.0...v0.1.1

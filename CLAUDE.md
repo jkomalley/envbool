@@ -20,18 +20,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The project uses a `src/envbool/` layout with this module structure:
 
-- `core.py` — Pure string coercion logic (`to_bool`, set resolution, default sets). No `os.environ` dependency.
-- `env.py` — `envbool()` function: reads env vars, delegates to `core.py`.
-- `config.py` — Config file discovery (project-level walking up dirs, user-level via `platformdirs`), TOML parsing, thread-safe caching with double-checked locking, `EnvBoolConfig` frozen dataclass, `_reset_config()`.
-- `exceptions.py` — `EnvBoolError` base, `InvalidBoolValueError(EnvBoolError, ValueError)`, `ConfigError(EnvBoolError)`.
-- `cli.py` — CLI entry point using `argparse`.
+- `_defaults.py` — Built-in truthy/falsy sets, shared set-resolution helpers (`_normalize_set`, `_apply_replace_or_extend`), and the process-level `Defaults` dataclass with `set_defaults()` / `get_defaults()` / `reset_defaults()`. A leaf module: no imports from elsewhere in envbool.
+- `_core.py` — Pure string coercion logic (`to_bool`, `_resolve`). No `os.environ` dependency.
+- `_env.py` — `envbool()` function: reads env vars, delegates to `_core.py`.
+- `exceptions.py` — `EnvBoolError` base, `InvalidBoolValueError(EnvBoolError, ValueError)`, `MissingEnvVarError(EnvBoolError, KeyError)`.
+- `_cli.py` — CLI entry point using `argparse`.
+- `__main__.py` — `python -m envbool` alias for the CLI.
 - `__init__.py` — Public API re-exports.
 
 Key design patterns:
 - **Lenient by default**, strict mode opt-in. In lenient mode, anything not in the truthy set returns `False`.
-- **Value set resolution** is two-phase: hardcoded defaults → config file → function arguments. `truthy` replaces, `extend_truthy` extends (ruff's select/extend-select pattern).
-- **Three-state parameters** (`strict`, `warn`): `None` defers to config, `True`/`False` override.
-- **Config caching**: loaded once on first use via double-checked locking. `_reset_config()` clears cache for tests.
+- **Value set resolution** is two-phase: hardcoded defaults → `set_defaults()` → function arguments. `truthy` replaces, `extend_truthy` extends (ruff's select/extend-select pattern).
+- **Three-state parameters** (`strict`, `warn`): `None` defers to `set_defaults()`, `True`/`False` override.
+- **Defaults caching**: a pre-populated in-memory `Defaults`; `set_defaults()`/`reset_defaults()` write under a lock. No disk I/O anywhere in the library.
 - **Return type is always `bool`** — no `None` returns.
 
 ## Workflow
@@ -52,6 +53,5 @@ Key design patterns:
 ## Testing Notes
 
 - Maintain 100% test coverage at all times — every new code path needs a test.
-- Config tests need `tmp_path` + `monkeypatch.chdir()` for isolation.
-- Every test should start with clean config state — use `_reset_config()` in fixtures.
+- Every test should end with clean defaults state — the autouse `reset_defaults()` fixture in conftest.py handles this.
 - `to_bool` tests should not touch `os.environ`; `envbool` tests use `monkeypatch.setenv`/`delenv`.
