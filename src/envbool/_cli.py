@@ -21,11 +21,6 @@ Value sets: --truthy/--falsy (repeatable) replace the truthy/falsy set;
 --extend-truthy/--extend-falsy (repeatable) add to it. Mirrors ruff's
 select/extend-select pattern.
 
---show-config prints the effective configuration (config file path, strict,
-warn, truthy, falsy) and exits. It can be combined with --strict/--truthy/
---falsy/--extend-truthy/--extend-falsy to preview overrides, but is mutually
-exclusive with VAR_NAME, --value, --print, and --default.
-
 Public surface:
     main()  -- entry point registered as the "envbool" command
 """
@@ -38,8 +33,7 @@ __all__ = ["main"]
 import argparse
 import sys
 
-from envbool._config import load_config
-from envbool._core import _resolve, to_bool
+from envbool._core import to_bool
 from envbool._env import envbool
 from envbool.exceptions import ConfigError, InvalidBoolValueError, MissingEnvVarError
 
@@ -125,33 +119,7 @@ def _build_parser() -> argparse.ArgumentParser:
         action="append",
         help="Add VALUE to the falsy set (repeatable).",
     )
-    parser.add_argument(
-        "--show-config",
-        action="store_true",
-        help="Print the effective configuration and exit.",
-    )
     return parser
-
-
-def _print_config(args: argparse.Namespace) -> None:
-    """Print the effective configuration, reflecting any CLI overrides."""
-    config = load_config()
-    effective_truthy, effective_falsy = _resolve(
-        config_truthy=config.effective_truthy,
-        config_falsy=config.effective_falsy,
-        truthy=args.truthy,
-        falsy=args.falsy,
-        extend_truthy=args.extend_truthy,
-        extend_falsy=args.extend_falsy,
-    )
-    effective_strict = args.strict if args.strict is not None else config.strict
-    effective_warn = args.warn if args.warn is not None else config.warn
-
-    print(f"config file: {config.source_path or 'none'}")
-    print(f"strict:      {str(effective_strict).lower()}")
-    print(f"warn:        {str(effective_warn).lower()}")
-    print(f"truthy:      {', '.join(sorted(effective_truthy))}")
-    print(f"falsy:       {', '.join(sorted(effective_falsy))}")
 
 
 def _coerce_from_source(
@@ -237,28 +205,10 @@ def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
 
-    # Both --show-config and the coercion calls below trigger config-file loading,
-    # so a malformed config can raise ConfigError from either path. A single error
-    # boundary around both keeps that failure a clean "error: ..." exit rather than
-    # an uncaught traceback. parser.error() and sys.exit() raise SystemExit, which
-    # is not caught here and so propagates as intended.
+    # A single error boundary keeps library failures a clean "error: ..." exit 2
+    # rather than an uncaught traceback. parser.error() and sys.exit() raise
+    # SystemExit, which is not caught here and so propagates as intended.
     try:
-        if args.show_config:
-            conflicting = (
-                args.var is not None
-                or args.value is not None
-                or args.print_result
-                or args.default
-                or args.required
-            )
-            if conflicting:
-                parser.error(
-                    "--show-config is mutually exclusive with VAR_NAME, --value, "
-                    "--print, --default, and --required"
-                )
-            _print_config(args)
-            sys.exit(0)
-
         result = _coerce_from_source(parser, args)
     except (InvalidBoolValueError, ConfigError, MissingEnvVarError) as e:
         print(f"error: {e}", file=sys.stderr)
