@@ -27,7 +27,7 @@ classifiers = [
 Homepage = "https://github.com/jkomalley/envbool"
 Repository = "https://github.com/jkomalley/envbool"
 Issues = "https://github.com/jkomalley/envbool/issues"
-Changelog = "https://github.com/jkomalley/envbool/releases"
+Changelog = "https://github.com/jkomalley/envbool/blob/main/CHANGELOG.md"
 
 [project.scripts]
 envbool = "envbool._cli:main"
