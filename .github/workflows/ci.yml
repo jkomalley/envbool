@@ -10,12 +10,13 @@ jobs:
   check:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.0.0
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -29,7 +30,7 @@ jobs:
         run: uv run ruff check src/ tests/
 
       - name: Type check
-        if: matrix.python-version == '3.13'
+        if: matrix.python-version == '3.14'
         run: uv run ty check src/
 
       - name: Test
