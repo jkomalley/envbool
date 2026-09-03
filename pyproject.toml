@@ -110,6 +110,11 @@ addopts = [
     "-ra",
     "--strict-markers",
     "--strict-config",
+    # Coverage policy lives here, not in the CI step, so the CI `check` job
+    # stays byte-identical across repos. `--cov` bare is enough because
+    # [tool.coverage.run] sets source below.
+    "--cov",
+    "--cov-fail-under=100",
 ]
 
 # --------------------------------------------------------------------------- #
