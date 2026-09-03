@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-09-02
+
+### Changed
+
+- Packaging metadata standardized across the project family: SPDX `license`
+  field, consistent `[project.urls]` keys, and a `Changelog` URL that now
+  points at `CHANGELOG.md` rather than the releases page.
+- Build requirement floor raised to `uv_build>=0.12.0,<0.13.0`.
+
+### Internal
+
+- CI consolidated into a single matrixed `check` job (Python 3.11-3.14) running
+  format, lint, type-check, and tests; `fail-fast` disabled so every leg reports.
+- Type checking pinned to Python 3.14.
+- Test coverage gated at 100%.
+- Release pipeline now extracts release notes from this file and publishes the
+  GitHub release directly rather than as a draft.
+- Dependency updates grouped by ecosystem, with a new `pre-commit` ecosystem,
+  and minor/patch updates merged automatically.
+
+No library code changed in this release.
+
 ## [0.4.0] - 2026-07-12
 
 ### Removed (breaking)
