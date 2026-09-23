@@ -100,6 +100,7 @@ extend_truthy = ["enabled"]
 ```python
 # equivalent, at application startup
 import envbool
+
 envbool.set_defaults(strict=True, extend_truthy=["enabled"])
 ```
 
