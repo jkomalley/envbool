@@ -17,14 +17,13 @@ install:
 run *args:
     uv run envbool "$@"
 
-# Run tests quickly, without coverage or its 100% gate
+# Run tests without the coverage gate
 test:
     uv run pytest --no-cov
 
-# Run tests with coverage and enforce 100% execution. The coverage flags live
-# in pyproject.toml's pytest addopts, so plain pytest already applies the gate.
+# Run tests with coverage and enforce 100% execution
 test-cov:
-    uv run pytest
+    uv run pytest --cov --cov-fail-under=100
 
 # Check code formatting (for CI)
 format-check:
