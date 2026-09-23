@@ -20,11 +20,12 @@ approach before investing time in a PR.
 git clone https://github.com/jkomalley/envbool.git
 cd envbool
 uv sync                    # create the venv and install all dependencies
-uv run pre-commit install  # enable the git hooks
+uv run pre-commit install  # enable the pre-commit and pre-push git hooks
 ```
 
 That's it — `uv sync` installs the project and its dev tooling into a managed
-virtual environment.
+virtual environment. With [`just`](https://github.com/casey/just) installed,
+`just install` runs both steps.
 
 ## Project layout
 
@@ -35,8 +36,7 @@ responsibility:
 | --- | --- |
 | `_core.py` | Pure string-to-bool coercion (`to_bool`) and value-set resolution. No `os.environ` access. |
 | `_env.py` | `envbool()` — reads the environment, then delegates to `_core`. |
-| `_config.py` | Config-file discovery, TOML parsing, and the thread-safe config cache. |
-| `_defaults.py` | The built-in `DEFAULT_TRUTHY` / `DEFAULT_FALSY` sets. |
+| `_defaults.py` | The built-in `DEFAULT_TRUTHY` / `DEFAULT_FALSY` sets, shared set-resolution helpers, and the process-level defaults behind `set_defaults()` / `get_defaults()` / `reset_defaults()`. |
 | `_cli.py` | The `envbool` command-line entry point. |
 | `exceptions.py` | The `EnvBoolError` exception hierarchy. |
 | `__init__.py` | The public API surface (re-exports). |
@@ -51,7 +51,7 @@ The repo uses [`just`](https://github.com/casey/just) as a task runner. Run
 everything before pushing:
 
 ```bash
-just            # format + lint + typecheck + test
+just check      # format + lint + typecheck + tests with coverage
 ```
 
 Or run individual tasks:
@@ -60,8 +60,8 @@ Or run individual tasks:
 just format     # ruff format
 just lint       # ruff check
 just typecheck  # ty check
-just test       # pytest
-just cov        # pytest with coverage
+just test       # pytest, fast (no coverage)
+just test-cov   # pytest with the 100% coverage gate
 ```
 
 Each task maps to a plain `uv run …` command, so you can run them directly if
@@ -81,13 +81,12 @@ you'd rather not install `just`.
 ### Testing
 
 - **100% coverage is required.** Every new code path needs a test; check with
-  `just cov`.
-- Config tests must isolate the filesystem with `tmp_path` and
-  `monkeypatch.chdir()`.
+  `just test-cov`.
 - `to_bool()` tests must not touch `os.environ`; use `monkeypatch.setenv` /
   `delenv` in `envbool()` tests instead.
-- Every test starts from a clean config cache — the autouse
-  `_reset_envbool_config` fixture in `conftest.py` handles this for you.
+- Every test ends with clean process-level defaults — the autouse
+  `_reset_envbool_defaults` fixture in `conftest.py` calls `reset_defaults()`
+  for you.
 
 ## Pull requests
 
@@ -95,7 +94,7 @@ you'd rather not install `just`.
 - Keep commits atomic — a single coherent change each, not a bundle of unrelated
   edits.
 - Include tests for any new or changed behavior.
-- Make sure `just` passes cleanly before you open the PR.
+- Make sure `just check` passes cleanly before you open the PR.
 
 CI runs the full check suite against Python 3.11–3.14 on every pull request.
 
@@ -119,10 +118,11 @@ bump and apply it with `uv`:
 | --- | --- | --- |
 | Any `feat:` | minor | `uv version --bump minor` |
 | Only `fix:` / `docs:` / `chore:` | patch | `uv version --bump patch` |
-| A breaking change (`feat!:`, `BREAKING CHANGE`) | major¹ | `uv version --bump major` |
+| A breaking change (`feat!:`, `BREAKING CHANGE`) | minor (pre-1.0)¹ | `uv version --bump minor` |
 
 ¹ While the project is pre-1.0, breaking changes are released as a **minor**
-bump per semver's 0.x convention.
+bump per semver's 0.x convention. Only once the project reaches 1.0 does a
+breaking change call for `uv version --bump major`.
 
 Open the bump as its own PR. The `version-guard` CI job enforces this: it fails
 any release PR whose bump is too small for the commits since the last release

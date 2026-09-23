@@ -17,9 +17,9 @@ Reading a boolean out of the environment is the kind of thing every project
 reinvents, slightly differently, in slightly buggy ways:
 
 ```python
-DEBUG   = os.environ.get("DEBUG",   "").lower() in ("1", "true", "yes")
+DEBUG = os.environ.get("DEBUG", "").lower() in ("1", "true", "yes")
 VERBOSE = os.environ.get("VERBOSE", "").lower() in ("1", "true", "yes")
-CACHE   = os.environ.get("CACHE",   "").lower() in ("1", "true", "yes")
+CACHE = os.environ.get("CACHE", "").lower() in ("1", "true", "yes")
 ```
 
 `envbool` is that snippet, done once and done properly:
@@ -27,9 +27,9 @@ CACHE   = os.environ.get("CACHE",   "").lower() in ("1", "true", "yes")
 ```python
 from envbool import envbool
 
-DEBUG   = envbool("DEBUG")
+DEBUG = envbool("DEBUG")
 VERBOSE = envbool("VERBOSE")
-CACHE   = envbool("CACHE")
+CACHE = envbool("CACHE")
 ```
 
 ## Features
@@ -73,8 +73,8 @@ uv add envbool
 ```python
 from envbool import envbool
 
-DEBUG = envbool("DEBUG")                 # False if unset or empty
-CACHE = envbool("CACHE", default=True)   # True if unset or empty
+DEBUG = envbool("DEBUG")  # False if unset or empty
+CACHE = envbool("CACHE", default=True)  # True if unset or empty
 ```
 
 The built-in truthy values are `true`, `1`, `yes`, `on`; the falsy values are
@@ -117,8 +117,8 @@ same keyword arguments as `envbool`.
 ```python
 from envbool import to_bool
 
-to_bool("yes")                 # True
-to_bool("0")                   # False
+to_bool("yes")  # True
+to_bool("0")  # False
 to_bool("maybe", strict=True)  # raises InvalidBoolValueError
 ```
 
@@ -257,9 +257,9 @@ from envbool import envbool, InvalidBoolValueError
 try:
     result = envbool("MY_VAR", strict=True)
 except InvalidBoolValueError as e:
-    print(e.var)    # "MY_VAR" — env var name, or None when raised from to_bool()
+    print(e.var)  # "MY_VAR" — env var name, or None when raised from to_bool()
     print(e.value)  # "maybe" — the normalized (stripped, lowercased) value
-    print(e.truthy) # frozenset({"true", "1", "yes", "on"}) — effective truthy set
+    print(e.truthy)  # frozenset({"true", "1", "yes", "on"}) — effective truthy set
     print(e.falsy)  # frozenset({"false", "0", "no", "off"}) — effective falsy set
 ```
 
@@ -317,6 +317,7 @@ fixture so overrides don't leak across the suite:
 # conftest.py
 import pytest
 from envbool import reset_defaults
+
 
 @pytest.fixture(autouse=True)
 def _reset_envbool_defaults():

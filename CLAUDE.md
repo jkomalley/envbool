@@ -9,9 +9,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 - **Install deps:** `uv sync`
-- **Run tests:** `uv run pytest`
-- **Run single test:** `uv run pytest tests/test_core.py::test_name -v`
-- **Test with coverage:** `uv run pytest --cov=envbool`
+- **Run tests (fast, no coverage):** `uv run pytest --no-cov`
+- **Run single test:** `uv run pytest tests/test_core.py::test_name -v --no-cov`
+- **Test with 100% coverage gate:** `uv run pytest` (coverage flags live in pytest `addopts`)
 - **Lint:** `uv run ruff check src/ tests/`
 - **Format:** `uv run ruff format src/ tests/`
 - **Type check:** `uv run ty check src/`
@@ -38,6 +38,7 @@ Key design patterns:
 ## Workflow
 
 - Every feature, fix, or other change gets its own branch and pull request — no direct commits to main.
+- **PRs are merged with a merge commit** — never squashed or rebased. Both break stacked PRs, and this project family works in stacks.
 - Commits must be atomic: one logical change per commit, no bundling independent changes together.
 - When there is any ambiguity in requirements or approach, ask questions before writing code.
 - Follow DRY (Don't Repeat Yourself) — extract shared logic rather than duplicating it.
