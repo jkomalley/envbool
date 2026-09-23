@@ -36,8 +36,7 @@ responsibility:
 | --- | --- |
 | `_core.py` | Pure string-to-bool coercion (`to_bool`) and value-set resolution. No `os.environ` access. |
 | `_env.py` | `envbool()` — reads the environment, then delegates to `_core`. |
-| `_config.py` | Config-file discovery, TOML parsing, and the thread-safe config cache. |
-| `_defaults.py` | The built-in `DEFAULT_TRUTHY` / `DEFAULT_FALSY` sets. |
+| `_defaults.py` | The built-in `DEFAULT_TRUTHY` / `DEFAULT_FALSY` sets, shared set-resolution helpers, and the process-level defaults behind `set_defaults()` / `get_defaults()` / `reset_defaults()`. |
 | `_cli.py` | The `envbool` command-line entry point. |
 | `exceptions.py` | The `EnvBoolError` exception hierarchy. |
 | `__init__.py` | The public API surface (re-exports). |
@@ -83,12 +82,11 @@ you'd rather not install `just`.
 
 - **100% coverage is required.** Every new code path needs a test; check with
   `just test-cov`.
-- Config tests must isolate the filesystem with `tmp_path` and
-  `monkeypatch.chdir()`.
 - `to_bool()` tests must not touch `os.environ`; use `monkeypatch.setenv` /
   `delenv` in `envbool()` tests instead.
-- Every test starts from a clean config cache — the autouse
-  `_reset_envbool_config` fixture in `conftest.py` handles this for you.
+- Every test ends with clean process-level defaults — the autouse
+  `_reset_envbool_defaults` fixture in `conftest.py` calls `reset_defaults()`
+  for you.
 
 ## Pull requests
 
