@@ -59,12 +59,8 @@ lock-upgrade:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    # The recipe commits pyproject.toml and uv.lock wholesale, so refuse to run
-    # over pre-existing edits (staged or not) rather than sweep them into an
-    # automated commit whose message would misdescribe them.
-    if ! git diff --quiet HEAD -- pyproject.toml uv.lock; then
-        echo "Error: pyproject.toml or uv.lock has uncommitted changes." >&2
-        echo "Commit or stash them before running lock-upgrade." >&2
+    if [ -n "$(git status --porcelain -- pyproject.toml uv.lock)" ]; then
+        echo "pyproject.toml or uv.lock has uncommitted changes; aborting." >&2
         exit 1
     fi
 
