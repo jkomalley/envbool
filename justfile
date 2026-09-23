@@ -1,7 +1,6 @@
 # Justfile for envbool project
 
 set shell := ["bash", "-c"]
-# Pass recipe arguments as $1, $2, ... so "$@" keeps arguments with spaces intact
 set positional-arguments
 
 # Show available recipes
