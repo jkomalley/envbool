@@ -9,9 +9,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 - **Install deps:** `uv sync`
-- **Run tests:** `uv run pytest`
-- **Run single test:** `uv run pytest tests/test_core.py::test_name -v`
-- **Test with coverage:** `uv run pytest --cov=envbool`
+- **Run tests (fast, no coverage):** `uv run pytest --no-cov`
+- **Run single test:** `uv run pytest tests/test_core.py::test_name -v --no-cov`
+- **Test with 100% coverage gate:** `uv run pytest` (coverage flags live in pytest `addopts`)
 - **Lint:** `uv run ruff check src/ tests/`
 - **Format:** `uv run ruff format src/ tests/`
 - **Type check:** `uv run ty check src/`
