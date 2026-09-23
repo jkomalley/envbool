@@ -5,6 +5,30 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Built distributions now include the `LICENSE` file: the wheel carries a
+  `License-File: LICENSE` entry and the sdist ships `LICENSE` at its root.
+
+### Internal
+
+- The pre-push `ty` and `pytest` hooks are now installed by
+  `pre-commit install`; previously they never ran.
+- Pre-commit runs `ruff-check` (renamed from the legacy `ruff` hook id) before
+  `ruff-format`, so a single pass converges.
+- `just run` passes arguments containing spaces through intact.
+- `just test` is now a fast run without coverage; `just test-cov` remains the
+  gated run.
+- `just lock-upgrade` refuses to run over uncommitted edits to
+  `pyproject.toml` or `uv.lock` instead of sweeping them into its commit.
+- `CONTRIBUTING.md` and `CLAUDE.md` corrected: real recipe names, the pre-1.0
+  bump rule, the merge-commit policy, and no leftover config-file references.
+- Locked dev dependencies upgraded.
+
+No library code changed.
+
 ## [0.4.1] - 2026-09-02
 
 ### Changed
@@ -156,6 +180,7 @@ Initial release.
 - CLI with exit-code semantics (`0` truthy, `1` falsy) and a `--print` flag.
 - TOML config support (`envbool.toml` or `[tool.envbool]` in `pyproject.toml`).
 
+[Unreleased]: https://github.com/jkomalley/envbool/compare/v0.4.1...HEAD
 [0.4.1]: https://github.com/jkomalley/envbool/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/jkomalley/envbool/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/jkomalley/envbool/compare/v0.2.0...v0.3.0
