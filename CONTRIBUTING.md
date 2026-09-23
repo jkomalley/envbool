@@ -20,11 +20,12 @@ approach before investing time in a PR.
 git clone https://github.com/jkomalley/envbool.git
 cd envbool
 uv sync                    # create the venv and install all dependencies
-uv run pre-commit install  # enable the git hooks
+uv run pre-commit install  # enable the pre-commit and pre-push git hooks
 ```
 
 That's it — `uv sync` installs the project and its dev tooling into a managed
-virtual environment.
+virtual environment. With [`just`](https://github.com/casey/just) installed,
+`just install` runs both steps.
 
 ## Project layout
 
@@ -51,7 +52,7 @@ The repo uses [`just`](https://github.com/casey/just) as a task runner. Run
 everything before pushing:
 
 ```bash
-just            # format + lint + typecheck + test
+just check      # format + lint + typecheck + tests with coverage
 ```
 
 Or run individual tasks:
@@ -60,8 +61,8 @@ Or run individual tasks:
 just format     # ruff format
 just lint       # ruff check
 just typecheck  # ty check
-just test       # pytest
-just cov        # pytest with coverage
+just test       # pytest, fast (no coverage)
+just test-cov   # pytest with the 100% coverage gate
 ```
 
 Each task maps to a plain `uv run …` command, so you can run them directly if
@@ -81,7 +82,7 @@ you'd rather not install `just`.
 ### Testing
 
 - **100% coverage is required.** Every new code path needs a test; check with
-  `just cov`.
+  `just test-cov`.
 - Config tests must isolate the filesystem with `tmp_path` and
   `monkeypatch.chdir()`.
 - `to_bool()` tests must not touch `os.environ`; use `monkeypatch.setenv` /
@@ -95,7 +96,7 @@ you'd rather not install `just`.
 - Keep commits atomic — a single coherent change each, not a bundle of unrelated
   edits.
 - Include tests for any new or changed behavior.
-- Make sure `just` passes cleanly before you open the PR.
+- Make sure `just check` passes cleanly before you open the PR.
 
 CI runs the full check suite against Python 3.11–3.14 on every pull request.
 
@@ -119,10 +120,11 @@ bump and apply it with `uv`:
 | --- | --- | --- |
 | Any `feat:` | minor | `uv version --bump minor` |
 | Only `fix:` / `docs:` / `chore:` | patch | `uv version --bump patch` |
-| A breaking change (`feat!:`, `BREAKING CHANGE`) | major¹ | `uv version --bump major` |
+| A breaking change (`feat!:`, `BREAKING CHANGE`) | minor (pre-1.0)¹ | `uv version --bump minor` |
 
 ¹ While the project is pre-1.0, breaking changes are released as a **minor**
-bump per semver's 0.x convention.
+bump per semver's 0.x convention. Only once the project reaches 1.0 does a
+breaking change call for `uv version --bump major`.
 
 Open the bump as its own PR. The `version-guard` CI job enforces this: it fails
 any release PR whose bump is too small for the commits since the last release
