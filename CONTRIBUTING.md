@@ -94,6 +94,9 @@ you'd rather not install `just`.
 - Keep commits atomic — a single coherent change each, not a bundle of unrelated
   edits.
 - Include tests for any new or changed behavior.
+- Add a bullet under `## [Unreleased]` in `CHANGELOG.md` for any user-facing
+  change, so the changelog is always release-ready (internal-only refactors,
+  CI, and docs changes are exempt).
 - Make sure `just check` passes cleanly before you open the PR.
 
 CI runs the full check suite against Python 3.11–3.14 on every pull request.
@@ -103,6 +106,19 @@ CI runs the full check suite against Python 3.11–3.14 on every pull request.
 Releases are published to PyPI automatically: the CD workflow fires when CI
 passes on `main` and publishes whenever `pyproject.toml`'s version isn't already
 on PyPI. So a release is just a version bump merged to `main`.
+
+The GitHub release's notes come straight from `CHANGELOG.md`, so keep it
+current as you go (see the changelog bullet under
+[Pull requests](#pull-requests)). Cutting a release is then a
+`chore: release vX.Y.Z` PR that, in one commit:
+
+- bumps the version (below),
+- renames `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` and adds a fresh empty
+  `## [Unreleased]` above it, and
+- updates the compare links at the bottom of `CHANGELOG.md`.
+
+If the bumped version has no `CHANGELOG.md` section, the release workflow fails
+rather than shipping empty notes.
 
 Choose the bump from the changes since the **last release tag**, not just your
 latest work:
