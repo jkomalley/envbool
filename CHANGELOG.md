@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Internal
 
 - The pre-push `ty` and `pytest` hooks are now installed by
-  `pre-commit install`; previously they never ran.
+  `pre-commit install`; previously they never ran. All other hooks stay
+  scoped to the pre-commit stage.
 - Pre-commit runs `ruff-check` (renamed from the legacy `ruff` hook id) before
   `ruff-format`, so a single pass converges.
 - `just run` passes arguments containing spaces through intact.
@@ -25,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pyproject.toml` or `uv.lock` instead of sweeping them into its commit.
 - `CONTRIBUTING.md` and `CLAUDE.md` corrected: real recipe names, the pre-1.0
   bump rule, the merge-commit policy, and no leftover config-file references.
+- The Dependabot auto-merge workflow only triggers on dependency-file changes,
+  so it no longer shows up as a skipped check on unrelated PRs.
 - Locked dev dependencies upgraded.
 
 No library code changed.
