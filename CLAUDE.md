@@ -38,6 +38,7 @@ Key design patterns:
 ## Workflow
 
 - Every feature, fix, or other change gets its own branch and pull request — no direct commits to main.
+- **PRs are merged with a merge commit** — never squashed or rebased. Both break stacked PRs, and this project family works in stacks.
 - Commits must be atomic: one logical change per commit, no bundling independent changes together.
 - When there is any ambiguity in requirements or approach, ask questions before writing code.
 - Follow DRY (Don't Repeat Yourself) — extract shared logic rather than duplicating it.
