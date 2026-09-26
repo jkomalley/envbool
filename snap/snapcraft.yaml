@@ -1,0 +1,40 @@
+name: envbool
+base: core24
+version: "0.4.2"
+summary: Tool for coercing environment variables into boolean values
+description: |
+  A tool for coercing environment variables (and arbitrary strings) into boolean values. Exits 0 for truthy, 1 for falsy, and 2 on error.
+  
+  ## Installation
+  
+  ```
+  snap install envbool
+  ```
+  
+  ## Usage
+  
+  ```
+  $ export DEBUG=true
+  $ envbool DEBUG && echo "debug is on"
+  debug is on
+  
+  $ echo "Verbose: $(envbool --print VERBOSE)"
+  Verbose: false
+  
+  $ echo "yes" | envbool && echo "truthy"
+  truthy
+  
+  $ envbool --strict ENABLE_CACHE || echo "cache is off or misconfigured"
+  cache is off or misconfigured
+  ```
+grade: devel
+confinement: strict
+license: MIT
+parts:
+  envbool:
+    plugin: python
+    source: .
+apps:
+  envbool:
+    command: bin/envbool
+
