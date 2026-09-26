@@ -211,3 +211,7 @@ __marimo__/
 
 # Local scratch docs
 _*.md
+
+# Snapcraft
+*.snap
+
