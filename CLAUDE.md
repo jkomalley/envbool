@@ -30,7 +30,7 @@ The project uses a `src/envbool/` layout with this module structure:
 
 Key design patterns:
 - **Lenient by default**, strict mode opt-in. In lenient mode, anything not in the truthy set returns `False`.
-- **Value set resolution** is two-phase: hardcoded defaults → `set_defaults()` → function arguments. `truthy` replaces, `extend_truthy` extends (ruff's select/extend-select pattern).
+- **Value set resolution** is two-phase: hardcoded defaults → `set_defaults()` → function arguments. `truthy` replaces, `extend_truthy` extends on top of the (possibly replaced) set.
 - **Three-state parameters** (`strict`, `warn`): `None` defers to `set_defaults()`, `True`/`False` override.
 - **Defaults caching**: a pre-populated in-memory `Defaults`; `set_defaults()`/`reset_defaults()` write under a lock. No disk I/O anywhere in the library.
 - **Return type is always `bool`** — no `None` returns.

@@ -172,8 +172,8 @@ def _resolve(
     extend_truthy: Iterable[str] | None = None,
     extend_falsy: Iterable[str] | None = None,
 ) -> tuple[frozenset[str], frozenset[str]]:
-    # Priority mirrors ruff's select/extend-select pattern -- see
-    # _apply_replace_then_extend() docstring for the full precedence rules.
+    # Replace-then-extend, per set -- see the _apply_replace_then_extend()
+    # docstring for the full precedence rules.
     effective_truthy = _apply_replace_then_extend(config_truthy, truthy, extend_truthy)
     effective_falsy = _apply_replace_then_extend(config_falsy, falsy, extend_falsy)
 

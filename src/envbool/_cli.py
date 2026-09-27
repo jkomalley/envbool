@@ -19,7 +19,7 @@ Omitting --strict or --warn defers to the process-level defaults
 
 Value sets: --truthy/--falsy (repeatable) replace the truthy/falsy set;
 --extend-truthy/--extend-falsy (repeatable) add to it, after any
-replacement. Mirrors ruff's select/extend-select pattern.
+replacement.
 
 Public surface:
     main()  -- entry point registered as the "envbool" command

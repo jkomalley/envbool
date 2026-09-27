@@ -46,11 +46,11 @@ def _apply_replace_then_extend(
 
     Shared by _resolve() (call-site truthy/falsy args, in _core.py) and
     set_defaults() (below) since both layer their inputs on top of a base set
-    using ruff's select/extend-select pattern:
+    the same way:
         replace -- swaps out base entirely; the caller owns the starting set
         extend  -- additive; merged on top of whatever replace left
         neither -- use base as-is
-    Passing both is replace-then-extend, as in ruff: neither argument is
+    Passing both applies replace first, then extend, so neither argument is
     silently dropped.
 
     Args:
