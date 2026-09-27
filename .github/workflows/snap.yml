@@ -31,4 +31,3 @@ jobs:
         with:
           name: envbool-${{ runner.arch }}
           path: ${{ steps.snapcraft.outputs.snap }}
-
