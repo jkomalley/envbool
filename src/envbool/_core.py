@@ -24,7 +24,7 @@ from envbool._defaults import (
     _apply_replace_or_extend,
     get_defaults,
 )
-from envbool.exceptions import InvalidBoolValueError
+from envbool.exceptions import ConflictingValuesError, InvalidBoolValueError
 
 # Module-level logger -- attributed to "envbool._core" so callers can filter it
 # independently from "envbool.config" or the root "envbool" logger.
@@ -65,6 +65,8 @@ def to_bool(
 
     Raises:
         InvalidBoolValueError: In strict mode when value is unrecognized.
+        ConflictingValuesError: In strict mode when the effective truthy and
+            falsy sets overlap.
     """
     # Normalize first so all comparisons are case- and whitespace-insensitive.
     # Empty after normalization means "unset" -- return the caller's default
@@ -90,10 +92,27 @@ def to_bool(
         extend_falsy=extend_falsy,
     )
 
-    # Overlapping sets are a caller mistake, not a runtime error. Warn so the
-    # problem is visible, then let truthy win to stay consistent and predictable.
+    # Three-state logic: True/False at the call site override the process-level
+    # default; None defers to whatever set_defaults() last set (which defaults
+    # to False if set_defaults() was never called). Resolved before the lookup
+    # because the overlap check below also depends on it.
+    effective_strict = strict if strict is not None else defaults.strict
+
+    # Overlapping sets are a configuration mistake. Strict mode promises every
+    # accepted value is unambiguous, so it rejects the configuration outright --
+    # on every call, not just when the value lands in the overlap, so the
+    # mistake surfaces at the first strict read. Lenient mode warns so the
+    # problem is visible, then lets truthy win to stay predictable.
     overlap = effective_truthy & effective_falsy
     if overlap:
+        if effective_strict:
+            err = ConflictingValuesError(
+                f"Truthy and falsy sets overlap: {', '.join(sorted(overlap))}"
+            )
+            err.overlap = overlap
+            err.truthy = effective_truthy
+            err.falsy = effective_falsy
+            raise err
         _logger.warning(
             "Overlapping truthy/falsy values (truthy wins): %s", sorted(overlap)
         )
@@ -101,15 +120,11 @@ def to_bool(
     if normalized in effective_truthy:
         return True
 
-    # Falsy is checked after truthy so the overlap rule above is enforced
-    # without any extra branching.
+    # Falsy is checked after truthy so the lenient overlap rule above (truthy
+    # wins) is enforced without any extra branching.
     if normalized in effective_falsy:
         return False
 
-    # Three-state logic: True/False at the call site override the process-level
-    # default; None defers to whatever set_defaults() last set (which defaults
-    # to False if set_defaults() was never called).
-    effective_strict = strict if strict is not None else defaults.strict
     if effective_strict:
         truthy_list = ", ".join(sorted(effective_truthy))
         falsy_list = ", ".join(sorted(effective_falsy))

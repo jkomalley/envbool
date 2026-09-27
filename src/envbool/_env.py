@@ -51,6 +51,8 @@ def envbool(
 
     Raises:
         InvalidBoolValueError: In strict mode when the value is unrecognized.
+        ConflictingValuesError: In strict mode when the effective truthy and
+            falsy sets overlap.
         MissingEnvVarError: When required=True and the variable is unset.
     """
     # `required` distinguishes "absent from the environment" from "set but empty"
