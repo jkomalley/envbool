@@ -31,6 +31,26 @@ parts:
     override-pull: |
       craftctl default
       craftctl set version="$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')"
+    # The python plugin builds a venv and upgrades pip/setuptools/wheel into
+    # it; none of that is used at runtime (envbool has no dependencies), and
+    # it is nearly all of the snap's size. `python3.*` keeps the filter valid
+    # when the base (and its Python) changes.
+    prime:
+      - -lib/python3.*/site-packages/pip
+      - -lib/python3.*/site-packages/pip-*
+      - -lib/python3.*/site-packages/setuptools
+      - -lib/python3.*/site-packages/setuptools-*
+      - -lib/python3.*/site-packages/pkg_resources
+      - -lib/python3.*/site-packages/_distutils_hack
+      - -lib/python3.*/site-packages/distutils-precedence.pth
+      - -lib/python3.*/site-packages/wheel
+      - -lib/python3.*/site-packages/wheel-*
+      - -lib/python3.*/site-packages/packaging
+      - -lib/python3.*/site-packages/packaging-*
+      - -bin/pip*
+      - -bin/wheel
+      - -bin/activate*
+      - -bin/Activate.ps1
 apps:
   envbool:
     command: bin/envbool
