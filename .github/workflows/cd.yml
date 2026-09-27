@@ -16,6 +16,9 @@ jobs:
     permissions:
       contents: write
       id-token: write
+    outputs:
+      publish: ${{ steps.check.outputs.publish }}
+      version: ${{ steps.check.outputs.version }}
 
     steps:
       - uses: actions/checkout@v7.0.1
@@ -93,3 +96,47 @@ jobs:
             --notes-file release-notes.md \
             --latest \
             dist/*
+
+  # The snap follows the PyPI release: same version gate, and only after PyPI
+  # succeeded, so the Store never gets a version PyPI doesn't have. Snaps are
+  # rebuilt and re-tested here via the Snap workflow rather than borrowed from
+  # another run.
+  snap-build:
+    needs: release
+    if: needs.release.outputs.publish == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/snap.yml
+
+  snap-publish:
+    needs: [release, snap-build]
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          pattern: envbool-*
+          merge-multiple: true
+
+      - name: Install snapcraft
+        run: sudo snap install snapcraft --classic
+
+      # Straight to stable, matching PyPI. Snap users auto-refresh, so this is
+      # the moment a release reaches them. `upload --release` is used instead
+      # of `promote`, whose CLI snapcraft warns is not stable for scripting.
+      # A rerun of this job after a partial failure re-uploads both snaps; the
+      # Store just assigns new revisions.
+      - name: Upload to Snap Store (stable)
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          shopt -s nullglob
+          snaps=(envbool_"${VERSION}"_*.snap)
+          if [ "${#snaps[@]}" -ne 2 ]; then
+            echo "::error::Expected 2 snaps for v${VERSION}, found: ${snaps[*]:-none}"
+            exit 1
+          fi
+          for snap in "${snaps[@]}"; do
+            snapcraft upload --release=stable "$snap"
+          done
