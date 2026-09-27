@@ -6,6 +6,14 @@ on:
   pull_request:
     branches: [main]
   merge_group:
+  # CD calls this workflow to build and test the snaps it publishes, so a
+  # release ships exactly what passed these checks.
+  workflow_call:
+
+# Read-only: this workflow also runs inside CD (workflow_call), and nothing
+# here needs to write to the repo.
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -16,6 +24,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: canonical/craft-actions/snapcraft/pack@v0.1.1
         id: snapcraft
