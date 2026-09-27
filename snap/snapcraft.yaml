@@ -1,6 +1,5 @@
 name: envbool
 base: core24
-version: "0.4.2"
 summary: Tool for coercing environment variables into boolean values
 description: |
   A tool for coercing environment variables (and arbitrary strings) into boolean values. Exits 0 for truthy, 1 for falsy, and 2 on error.
@@ -30,10 +29,14 @@ description: |
 grade: devel
 confinement: strict
 license: MIT
+adopt-info: envbool
 parts:
   envbool:
     plugin: python
     source: .
+    override-pull: |
+      craftctl default
+      craftctl set version="$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')"
 apps:
   envbool:
     command: bin/envbool
