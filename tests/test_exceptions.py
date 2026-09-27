@@ -8,6 +8,7 @@ correct attributes) belong in the modules that raise them (core, config).
 import pytest
 
 from envbool.exceptions import (
+    ConflictingValuesError,
     EnvBoolError,
     InvalidBoolValueError,
     MissingEnvVarError,
@@ -31,6 +32,24 @@ class TestEnvBoolError:
     def test_raises_as_exception(self):
         with pytest.raises(EnvBoolError, match="boom"):
             raise EnvBoolError("boom")
+
+
+class TestConflictingValuesError:
+    """Dual-inheritance: EnvBoolError + ValueError, like InvalidBoolValueError."""
+
+    def test_is_envbool_error(self):
+        assert issubclass(ConflictingValuesError, EnvBoolError)
+
+    def test_is_value_error(self):
+        assert issubclass(ConflictingValuesError, ValueError)
+
+    def test_is_not_invalid_bool_value_error(self):
+        # A config conflict is not a bad input value; keep the two distinct.
+        assert not issubclass(ConflictingValuesError, InvalidBoolValueError)
+
+    def test_mro_order(self):
+        mro = ConflictingValuesError.__mro__
+        assert mro.index(EnvBoolError) < mro.index(ValueError)
 
 
 class TestInvalidBoolValueError:

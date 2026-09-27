@@ -8,6 +8,7 @@ which predates envbool adoption keeps working without changes.
 Hierarchy:
     EnvBoolError(Exception)
         InvalidBoolValueError(EnvBoolError, ValueError)
+        ConflictingValuesError(EnvBoolError, ValueError)
         MissingEnvVarError(EnvBoolError, KeyError)
 """
 
@@ -38,6 +39,28 @@ class InvalidBoolValueError(EnvBoolError, ValueError):
 
     # The effective truthy and falsy sets at the time of the error. Attached
     # so callers can inspect exactly what was expected without re-running resolution.
+    truthy: frozenset[str]
+    falsy: frozenset[str]
+
+
+class ConflictingValuesError(EnvBoolError, ValueError):
+    """Raised in strict mode when the effective truthy and falsy sets overlap.
+
+    This is a configuration error, not a bad input value -- which is why it is
+    distinct from InvalidBoolValueError. It is raised on every strict call while
+    the conflict exists (not only when the value lands in the overlap), so a
+    misconfiguration fails immediately instead of waiting for a colliding token.
+    ValueError inheritance matches InvalidBoolValueError, so a single
+    ``except ValueError`` still covers every strict-mode failure.
+    """
+
+    # Set by the raising code after construction (see InvalidBoolValueError for
+    # why attributes live here rather than in __init__).
+
+    # Values present in both sets.
+    overlap: frozenset[str]
+
+    # The effective truthy and falsy sets that conflicted.
     truthy: frozenset[str]
     falsy: frozenset[str]
 
