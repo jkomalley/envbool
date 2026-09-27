@@ -27,6 +27,17 @@ jobs:
           test "$(/snap/bin/envbool --print --value no)" = false
           test "$(DEBUG=on /snap/bin/envbool --print DEBUG)" = true
 
+      # Guard the snapcraft.yaml prime filter: the venv's build tooling is
+      # dead weight at runtime and must not creep back into the snap.
+      - name: Check snap excludes build tooling
+        run: |
+          ls -lh ${{ steps.snapcraft.outputs.snap }}
+          if unsquashfs -l ${{ steps.snapcraft.outputs.snap }} \
+              | grep -E "site-packages/(pip|setuptools|wheel|packaging)(/|-)|bin/(pip|wheel|activate)"; then
+            echo "::error::build tooling found in snap"
+            exit 1
+          fi
+
       - uses: actions/upload-artifact@v7.0.1
         with:
           name: envbool-${{ runner.arch }}

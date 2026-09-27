@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `envbool` CLI is packaged as a strictly confined snap
   (`snap install envbool`), built and tested on amd64 and arm64 in CI (#69).
 
+### Changed
+
+- The snap no longer ships the unused pip/setuptools/wheel build tooling,
+  shrinking it substantially (#73).
+
 ## [0.4.2] - 2026-09-22
 
 ### Changed
