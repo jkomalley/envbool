@@ -26,7 +26,7 @@ description: |
   $ envbool --strict ENABLE_CACHE || echo "cache is off or misconfigured"
   cache is off or misconfigured
   ```
-grade: devel
+grade: stable
 confinement: strict
 license: MIT
 adopt-info: envbool
