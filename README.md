@@ -178,6 +178,52 @@ built-in defaults  →  set_defaults()  →  function arguments / CLI flags
 `reset_defaults()` restores the built-ins — call it in a test fixture (see
 [Testing code that uses envbool](#testing-code-that-uses-envbool)).
 
+### Loading application settings
+
+In a real application, read every flag once at startup into a single settings
+object, with the policy set up front. With strict mode on, a typo like
+`DEBUG=ture` stops startup instead of quietly reading as `False`:
+
+```python
+import sys
+from dataclasses import dataclass
+
+import envbool
+from envbool import EnvBoolError
+
+
+@dataclass(frozen=True)
+class Settings:
+    debug: bool
+    use_cache: bool
+    new_checkout: bool
+    send_emails: bool
+
+
+def load_settings() -> Settings:
+    envbool.set_defaults(
+        strict=True,
+        extend_truthy=["enabled"],
+        extend_falsy=["disabled"],
+    )
+    return Settings(
+        debug=envbool.envbool("DEBUG"),  # off unless set
+        use_cache=envbool.envbool("USE_CACHE", default=True),  # on unless set
+        new_checkout=envbool.envbool("FEATURE_NEW_CHECKOUT"),
+        send_emails=envbool.envbool("SEND_EMAILS", required=True),  # must be set
+    )
+
+
+try:
+    SETTINGS = load_settings()
+except EnvBoolError as e:
+    sys.exit(f"Invalid configuration: {e}")
+```
+
+Catching `EnvBoolError` covers every failure: a bad value, a missing
+`required` variable, or overlapping value sets. The rest of the application
+reads `SETTINGS.debug` and never touches `os.environ` again.
+
 > Through 0.3.x, envbool read TOML config files (`envbool.toml`,
 > `[tool.envbool]`). 0.4.0 removed them in favor of `set_defaults()` — see
 > `CHANGELOG.md` for the rationale and migration note.
