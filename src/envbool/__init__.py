@@ -9,17 +9,18 @@ For except clauses, envbool.exceptions is also importable by name:
     from envbool.exceptions import InvalidBoolValueError
 
 Available names:
-    envbool()             -- read an env var and coerce to bool (primary API)
-    to_bool()             -- coerce an arbitrary string to bool (no os.environ)
-    set_defaults()        -- set process-level strict/warn/truthy/falsy defaults
-    get_defaults()        -- inspect the active process-level Defaults
-    reset_defaults()      -- restore built-in defaults (for test fixtures)
-    Defaults              -- frozen dataclass returned by get_defaults()
-    DEFAULT_TRUTHY        -- built-in truthy set (frozenset)
-    DEFAULT_FALSY         -- built-in falsy set (frozenset)
-    EnvBoolError          -- base exception for all envbool errors
-    InvalidBoolValueError -- raised in strict mode for unrecognized values
-    MissingEnvVarError    -- raised by envbool(required=True) when a var is unset
+    envbool()              -- read an env var and coerce to bool (primary API)
+    to_bool()              -- coerce an arbitrary string to bool (no os.environ)
+    set_defaults()         -- set process-level strict/warn/truthy/falsy defaults
+    get_defaults()         -- inspect the active process-level Defaults
+    reset_defaults()       -- restore built-in defaults (for test fixtures)
+    Defaults               -- frozen dataclass returned by get_defaults()
+    DEFAULT_TRUTHY         -- built-in truthy set (frozenset)
+    DEFAULT_FALSY          -- built-in falsy set (frozenset)
+    EnvBoolError           -- base exception for all envbool errors
+    InvalidBoolValueError  -- raised in strict mode for unrecognized values
+    ConflictingValuesError -- raised in strict mode when truthy/falsy overlap
+    MissingEnvVarError     -- raised by envbool(required=True) when a var is unset
 """
 # All implementation lives in private underscore-prefixed modules so the public
 # surface can be reshaped without breaking imports. Do not import from _core,
@@ -36,6 +37,7 @@ from envbool._defaults import (
 )
 from envbool._env import envbool
 from envbool.exceptions import (
+    ConflictingValuesError,
     EnvBoolError,
     InvalidBoolValueError,
     MissingEnvVarError,
@@ -44,6 +46,7 @@ from envbool.exceptions import (
 __all__ = [
     "DEFAULT_FALSY",
     "DEFAULT_TRUTHY",
+    "ConflictingValuesError",
     "Defaults",
     "EnvBoolError",
     "InvalidBoolValueError",

@@ -101,6 +101,9 @@ surrounding whitespace.
 
 Pass `strict=True` to raise `InvalidBoolValueError` on anything outside the
 truthy/falsy sets — ideal for failing fast on a misconfigured deployment.
+Strict mode also raises `ConflictingValuesError` if the effective truthy and
+falsy sets overlap (e.g. `extend_falsy={"on"}`), on every call, whatever the
+value. Lenient mode instead logs a warning and lets truthy win.
 
 ```python
 import sys
@@ -244,6 +247,7 @@ A few rules worth knowing:
 | `DEFAULT_FALSY` | `frozenset` of the built-in falsy strings. |
 | `EnvBoolError` | Base class for every exception the library raises. |
 | `InvalidBoolValueError` | Raised in strict mode for unrecognized values. Also a `ValueError`. |
+| `ConflictingValuesError` | Raised in strict mode when the truthy and falsy sets overlap. Also a `ValueError`. |
 | `MissingEnvVarError` | Raised by `envbool(required=True)` when the variable is unset. Also a `KeyError`. |
 
 `envbool()` and `to_bool()` share the same keyword-only options:
@@ -305,7 +309,7 @@ logging.getLogger("envbool").addHandler(logging.StreamHandler())
 | Level | When |
 | --- | --- |
 | `WARNING` | An unrecognized value fell through in lenient mode (only when `warn=True`). |
-| `WARNING` | The truthy and falsy sets overlap (truthy wins). |
+| `WARNING` | The truthy and falsy sets overlap in lenient mode (truthy wins; strict mode raises `ConflictingValuesError` instead). |
 
 ### The unset-vs-empty distinction
 

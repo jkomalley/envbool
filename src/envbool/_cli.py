@@ -36,7 +36,7 @@ import sys
 
 from envbool._core import to_bool
 from envbool._env import envbool
-from envbool.exceptions import InvalidBoolValueError, MissingEnvVarError
+from envbool.exceptions import EnvBoolError
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -213,7 +213,7 @@ def main() -> None:
     # SystemExit, which is not caught here and so propagates as intended.
     try:
         result = _coerce_from_source(parser, args)
-    except (InvalidBoolValueError, MissingEnvVarError) as e:
+    except EnvBoolError as e:
         print(f"error: {e}", file=sys.stderr)
         sys.exit(2)
 

@@ -5,7 +5,12 @@ import logging
 import pytest
 
 from envbool._core import DEFAULT_FALSY, DEFAULT_TRUTHY, _resolve, to_bool
-from envbool.exceptions import EnvBoolError, InvalidBoolValueError
+from envbool._defaults import set_defaults
+from envbool.exceptions import (
+    ConflictingValuesError,
+    EnvBoolError,
+    InvalidBoolValueError,
+)
 
 
 class TestDefaults:
@@ -323,6 +328,49 @@ class TestToBoolOverlap:
         with caplog.at_level(logging.WARNING, logger="envbool._core"):
             to_bool("true", truthy=["true"], falsy=["true"])
         assert caplog.records
+
+    def test_strict_overlap_raises(self):
+        with pytest.raises(ConflictingValuesError, match="overlap: true"):
+            to_bool("true", truthy=["true"], falsy=["true"], strict=True)
+
+    def test_strict_overlap_raises_for_non_colliding_value(self):
+        # The configuration is rejected outright, not only when the value
+        # happens to land in the overlap.
+        with pytest.raises(ConflictingValuesError):
+            to_bool("yes", extend_falsy=["on"], strict=True)
+
+    def test_strict_overlap_attributes(self):
+        with pytest.raises(ConflictingValuesError) as exc_info:
+            to_bool("x", truthy=["a", "b"], falsy=["b", "c"], strict=True)
+        err = exc_info.value
+        assert err.overlap == frozenset({"b"})
+        assert err.truthy == frozenset({"a", "b"})
+        assert err.falsy == frozenset({"b", "c"})
+
+    def test_strict_overlap_is_value_error(self):
+        with pytest.raises(ValueError, match="overlap"):
+            to_bool("true", truthy=["true"], falsy=["true"], strict=True)
+
+    def test_strict_overlap_no_warning(self, caplog):
+        with (
+            caplog.at_level(logging.WARNING, logger="envbool._core"),
+            pytest.raises(ConflictingValuesError),
+        ):
+            to_bool("true", truthy=["true"], falsy=["true"], strict=True)
+        assert not caplog.records
+
+    def test_strict_from_defaults_overlap_raises(self):
+        set_defaults(strict=True, extend_falsy=["on"])
+        with pytest.raises(ConflictingValuesError):
+            to_bool("yes")
+
+    def test_strict_false_overrides_defaults_on_overlap(self):
+        set_defaults(strict=True, extend_falsy=["on"])
+        assert to_bool("on", strict=False) is True
+
+    def test_strict_overlap_empty_value_returns_default(self):
+        # Empty values short-circuit before set resolution, as before.
+        assert to_bool("", truthy=["x"], falsy=["x"], strict=True) is False
 
 
 class TestToBoolVar:

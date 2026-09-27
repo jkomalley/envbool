@@ -58,6 +58,14 @@ class TestCLIExitCodes:
         captured = capsys.readouterr()
         assert "error" in captured.err.lower()
 
+    def test_strict_overlap_exits_2(self, monkeypatch, capsys):
+        monkeypatch.setenv("TEST_VAR", "yes")
+        code = run_cli(
+            "TEST_VAR", "--strict", "--falsy", "yes", monkeypatch=monkeypatch
+        )
+        assert code == 2
+        assert "overlap" in capsys.readouterr().err
+
 
 # ---------------------------------------------------------------------------
 # --required flag
