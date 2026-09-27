@@ -108,6 +108,11 @@ Releases are published to PyPI automatically: the CD workflow fires when CI
 passes on `main` and publishes whenever `pyproject.toml`'s version isn't already
 on PyPI. So a release is just a version bump merged to `main`.
 
+After PyPI succeeds, the same run builds and tests the snap on amd64 and arm64
+(reusing the Snap workflow) and uploads both to the Snap Store's
+`latest/stable` channel. Snap users auto-refresh, so a release reaches them
+without any action on their part.
+
 The GitHub release's notes come straight from `CHANGELOG.md`, so keep it
 current as you go (see the changelog bullet under
 [Pull requests](#pull-requests)). Cutting a release is then a
@@ -146,6 +151,28 @@ any release PR whose bump is too small for the commits since the last release
 (for example, shipping a `feat:` in a patch). Features merged to `main` without
 a release accumulate, so the bump must account for all of them — not just the
 most recent change.
+
+### Snap Store credentials
+
+The Store upload authenticates with the `SNAPCRAFT_STORE_CREDENTIALS` repo
+secret: an exported login limited to this snap, the `stable` channel, and the
+upload/release permissions. It **expires**, and a release after that date fails
+at the upload step (PyPI and the GitHub release still go out). To create or
+renew it:
+
+```bash
+snapcraft export-login \
+  --snaps=envbool \
+  --channels=stable \
+  --acls=package_access,package_push,package_update,package_release \
+  --expires=YYYY-MM-DD \
+  creds
+gh secret set SNAPCRAFT_STORE_CREDENTIALS < creds && rm creds
+```
+
+If an upload fails, fix the cause and use **Re-run failed jobs** on that CD
+run. Re-running the whole workflow does nothing, because the version is
+already on PyPI.
 
 ## License
 
