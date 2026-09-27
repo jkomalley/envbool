@@ -63,6 +63,22 @@ pip install envbool
 uv add envbool
 ```
 
+### Snap
+
+On Linux, the `envbool` command is also available as a strictly confined
+[snap](https://snapcraft.io/):
+
+```bash
+sudo snap install envbool
+```
+
+The snap ships the CLI only; to `import envbool` from your own code, install it
+with `pip` or `uv`. It reads ordinary environment variables unchanged, but
+snapd sets a few variables for every snap, so the CLI sees snapd's values for
+`HOME`, `PATH`, `TMPDIR`, `XDG_RUNTIME_DIR`, and `SNAP_*` rather than yours. If
+both the snap and a pip install are present, whichever of `/snap/bin` or your
+pip `bin` directory comes first on `PATH` wins.
+
 ## Usage
 
 ### The basics
