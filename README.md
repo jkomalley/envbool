@@ -233,6 +233,29 @@ A few rules worth knowing:
 - With no `VAR_NAME`, `--value`, or non-empty piped stdin, the CLI prints
   usage and exits `2`.
 
+### Scripts using `set -e`
+
+Under `set -e` (errexit), a falsy result is a failing command: a bare
+`envbool FLAG` on its own line aborts the script when the flag is off. Check
+the status inside a condition instead, where errexit doesn't apply, or use
+`--print` to get the answer as text:
+
+```bash
+set -e
+
+envbool FLAG                  # aborts the script when FLAG is falsy
+
+if envbool FLAG; then         # safe: the status is the condition
+  echo "on"
+fi
+
+flag=$(envbool --print FLAG)  # safe: always exits 0 unless there's an error
+```
+
+`--print` still exits `2` on an error, so `set -e` catches a missing
+`--required` variable or a bad value under `--strict`, while a falsy value
+doesn't stop the script.
+
 ## API reference
 
 | Symbol | Description |
