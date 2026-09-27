@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The `envbool` CLI is packaged as a strictly confined snap
   (`snap install envbool`), built and tested on amd64 and arm64 in CI (#69).
+- `ConflictingValuesError` (an `EnvBoolError` and `ValueError`), exported from
+  `envbool` (#74).
+
+### Changed
+
+- **Breaking:** strict mode now raises `ConflictingValuesError` when the
+  effective truthy and falsy sets overlap, on every call, instead of warning
+  and letting truthy win. Lenient mode is unchanged (#74).
+- The CLI exits `2` with a clean `error:` message for every library error, not
+  only invalid values and missing variables (#74).
 
 ## [0.4.2] - 2026-09-22
 
