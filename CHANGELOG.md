@@ -26,7 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   silently ignored. Applies to `envbool()`, `to_bool()`,
   `set_defaults()`, and the CLI (#76).
 - The snap no longer ships the unused pip/setuptools/wheel build tooling,
-  shrinking it substantially (#73).
+  shrinking it from 5.6 MB to 36 KB (#73).
+- Each release now publishes the snap to the Snap Store's `latest/stable`
+  channel alongside PyPI, so snap installs track PyPI releases (#78).
 
 ## [0.4.2] - 2026-09-22
 
