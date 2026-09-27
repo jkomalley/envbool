@@ -80,9 +80,9 @@ class TestResolveTruthy:
         t, _ = _resolve(config_truthy=config, extend_truthy=["ja"])
         assert t == frozenset({"si", "ja"})
 
-    def test_truthy_takes_priority_over_extend_truthy(self):
-        t, _ = _resolve(truthy=["only"], extend_truthy=["ignored"])
-        assert t == frozenset({"only"})
+    def test_extend_truthy_applies_on_top_of_truthy(self):
+        t, _ = _resolve(truthy=["only"], extend_truthy=["also"])
+        assert t == frozenset({"only", "also"})
 
     def test_truthy_accepts_list(self):
         t, _ = _resolve(truthy=["a", "b"])
@@ -133,9 +133,9 @@ class TestResolveFalsy:
         _, f = _resolve(config_falsy=config, extend_falsy=["nope"])
         assert f == frozenset({"nein", "nope"})
 
-    def test_falsy_takes_priority_over_extend_falsy(self):
-        _, f = _resolve(falsy=["only"], extend_falsy=["ignored"])
-        assert f == frozenset({"only"})
+    def test_extend_falsy_applies_on_top_of_falsy(self):
+        _, f = _resolve(falsy=["only"], extend_falsy=["also"])
+        assert f == frozenset({"only", "also"})
 
     def test_falsy_accepts_list(self):
         _, f = _resolve(falsy=["a", "b"])
@@ -299,9 +299,11 @@ class TestToBoolCustomSets:
         assert to_bool("disabled", extend_falsy=["disabled"], strict=True) is False
         assert to_bool("false", extend_falsy=["disabled"], strict=True) is False
 
-    def test_truthy_takes_priority_over_extend_truthy(self):
-        assert to_bool("only", truthy=["only"], extend_truthy=["ignored"]) is True
-        assert to_bool("ignored", truthy=["only"], extend_truthy=["ignored"]) is False
+    def test_truthy_then_extend_truthy(self):
+        # Replace first, then extend: both arguments count, and built-ins are gone.
+        assert to_bool("only", truthy=["only"], extend_truthy=["also"]) is True
+        assert to_bool("also", truthy=["only"], extend_truthy=["also"]) is True
+        assert to_bool("true", truthy=["only"], extend_truthy=["also"]) is False
 
     def test_empty_truthy_set(self):
         assert to_bool("true", truthy=set()) is False

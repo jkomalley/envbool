@@ -21,7 +21,7 @@ from collections.abc import Iterable
 from envbool._defaults import (
     DEFAULT_FALSY,
     DEFAULT_TRUTHY,
-    _apply_replace_or_extend,
+    _apply_replace_then_extend,
     get_defaults,
 )
 from envbool.exceptions import ConflictingValuesError, InvalidBoolValueError
@@ -56,8 +56,10 @@ def to_bool(
             process-level defaults (set_defaults()) (default False).
         truthy: Replaces the effective truthy set.
         falsy: Replaces the effective falsy set.
-        extend_truthy: Extends the effective truthy set.
-        extend_falsy: Extends the effective falsy set.
+        extend_truthy: Extends the effective truthy set, after any truthy
+            replacement.
+        extend_falsy: Extends the effective falsy set, after any falsy
+            replacement.
         _var: Internal - env var name for error messages when called via envbool().
 
     Returns:
@@ -170,9 +172,9 @@ def _resolve(
     extend_truthy: Iterable[str] | None = None,
     extend_falsy: Iterable[str] | None = None,
 ) -> tuple[frozenset[str], frozenset[str]]:
-    # Priority mirrors ruff's select/extend-select pattern -- see
-    # _apply_replace_or_extend() docstring for the full precedence rules.
-    effective_truthy = _apply_replace_or_extend(config_truthy, truthy, extend_truthy)
-    effective_falsy = _apply_replace_or_extend(config_falsy, falsy, extend_falsy)
+    # Replace-then-extend, per set -- see the _apply_replace_then_extend()
+    # docstring for the full precedence rules.
+    effective_truthy = _apply_replace_then_extend(config_truthy, truthy, extend_truthy)
+    effective_falsy = _apply_replace_then_extend(config_falsy, falsy, extend_falsy)
 
     return (effective_truthy, effective_falsy)

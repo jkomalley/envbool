@@ -68,9 +68,9 @@ class TestSetDefaults:
         assert "disabled" in result
         assert DEFAULT_FALSY.issubset(result)
 
-    def test_truthy_wins_over_extend_truthy(self):
-        set_defaults(truthy=["only"], extend_truthy=["ignored"])
-        assert get_defaults().effective_truthy == frozenset({"only"})
+    def test_extend_truthy_applies_on_top_of_truthy(self):
+        set_defaults(truthy=["only"], extend_truthy=["also"])
+        assert get_defaults().effective_truthy == frozenset({"only", "also"})
 
     def test_values_are_normalized(self):
         set_defaults(extend_truthy=["  ENABLED  "])

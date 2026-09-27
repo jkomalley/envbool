@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and letting truthy win. Lenient mode is unchanged (#74).
 - The CLI exits `2` with a clean `error:` message for every library error, not
   only invalid values and missing variables (#74).
+- **Breaking:** passing both `truthy` and `extend_truthy` (or the `falsy`
+  pair) now replaces the set and then extends it. Previously `extend_*` was
+  silently ignored. Applies to `envbool()`, `to_bool()`,
+  `set_defaults()`, and the CLI (#76).
 - The snap no longer ships the unused pip/setuptools/wheel build tooling,
   shrinking it substantially (#73).
 
@@ -153,8 +157,7 @@ bug fix and a full documentation overhaul.
 ### Added
 
 - Custom value sets on the CLI: `--truthy` / `--falsy` (replace) and
-  `--extend-truthy` / `--extend-falsy` (extend), mirroring the library API and
-  ruff's select/extend-select pattern.
+  `--extend-truthy` / `--extend-falsy` (extend), mirroring the library API.
 - `--show-config`: print the effective configuration (config file path,
   `strict`, `warn`, and the resolved truthy/falsy sets) and exit. Combine it
   with the value-set flags to preview overrides.

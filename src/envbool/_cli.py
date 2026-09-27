@@ -18,8 +18,8 @@ Omitting --strict or --warn defers to the process-level defaults
 (envbool.set_defaults(); default: lenient, no warnings).
 
 Value sets: --truthy/--falsy (repeatable) replace the truthy/falsy set;
---extend-truthy/--extend-falsy (repeatable) add to it. Mirrors ruff's
-select/extend-select pattern.
+--extend-truthy/--extend-falsy (repeatable) add to it, after any
+replacement.
 
 Public surface:
     main()  -- entry point registered as the "envbool" command
@@ -114,13 +114,13 @@ def _build_parser() -> argparse.ArgumentParser:
         "--extend-truthy",
         metavar="VALUE",
         action="append",
-        help="Add VALUE to the truthy set (repeatable).",
+        help="Add VALUE to the truthy set, after any --truthy (repeatable).",
     )
     parser.add_argument(
         "--extend-falsy",
         metavar="VALUE",
         action="append",
-        help="Add VALUE to the falsy set (repeatable).",
+        help="Add VALUE to the falsy set, after any --falsy (repeatable).",
     )
     return parser
 

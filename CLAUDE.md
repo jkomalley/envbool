@@ -20,7 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The project uses a `src/envbool/` layout with this module structure:
 
-- `_defaults.py` — Built-in truthy/falsy sets, shared set-resolution helpers (`_normalize_set`, `_apply_replace_or_extend`), and the process-level `Defaults` dataclass with `set_defaults()` / `get_defaults()` / `reset_defaults()`. A leaf module: no imports from elsewhere in envbool.
+- `_defaults.py` — Built-in truthy/falsy sets, shared set-resolution helpers (`_normalize_set`, `_apply_replace_then_extend`), and the process-level `Defaults` dataclass with `set_defaults()` / `get_defaults()` / `reset_defaults()`. A leaf module: no imports from elsewhere in envbool.
 - `_core.py` — Pure string coercion logic (`to_bool`, `_resolve`). No `os.environ` dependency.
 - `_env.py` — `envbool()` function: reads env vars, delegates to `_core.py`.
 - `exceptions.py` — `EnvBoolError` base, `InvalidBoolValueError(EnvBoolError, ValueError)`, `MissingEnvVarError(EnvBoolError, KeyError)`.
@@ -30,7 +30,7 @@ The project uses a `src/envbool/` layout with this module structure:
 
 Key design patterns:
 - **Lenient by default**, strict mode opt-in. In lenient mode, anything not in the truthy set returns `False`.
-- **Value set resolution** is two-phase: hardcoded defaults → `set_defaults()` → function arguments. `truthy` replaces, `extend_truthy` extends (ruff's select/extend-select pattern).
+- **Value set resolution** is two-phase: hardcoded defaults → `set_defaults()` → function arguments. `truthy` replaces, `extend_truthy` extends on top of the (possibly replaced) set.
 - **Three-state parameters** (`strict`, `warn`): `None` defers to `set_defaults()`, `True`/`False` override.
 - **Defaults caching**: a pre-populated in-memory `Defaults`; `set_defaults()`/`reset_defaults()` write under a lock. No disk I/O anywhere in the library.
 - **Return type is always `bool`** — no `None` returns.

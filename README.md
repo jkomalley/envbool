@@ -128,6 +128,16 @@ FEATURE = envbool("FEATURE_FLAG", extend_truthy={"enabled", "y"})
 LOCALE = envbool("USE_METRIC", truthy={"metric"}, falsy={"imperial"})
 ```
 
+Each set is built in order: start from the base set (the built-ins, or
+whatever `set_defaults()` configured), swap it out if `truthy`/`falsy` is
+given, then add anything in `extend_truthy`/`extend_falsy`. Passing both
+`truthy` and `extend_truthy` therefore gives you exactly their union:
+
+```python
+to_bool("y", truthy={"yes"}, extend_truthy={"y"})  # True
+to_bool("true", truthy={"yes"}, extend_truthy={"y"})  # False: built-ins replaced
+```
+
 ### Coercing arbitrary strings
 
 Use `to_bool` for values that don't come from the environment. It accepts the
@@ -218,8 +228,10 @@ options:
   --truthy VALUE        Replace the truthy set with VALUE (repeatable).
   --falsy VALUE         Replace the falsy set with VALUE (repeatable).
   --extend-truthy VALUE
-                        Add VALUE to the truthy set (repeatable).
-  --extend-falsy VALUE  Add VALUE to the falsy set (repeatable).
+                        Add VALUE to the truthy set, after any --truthy
+                        (repeatable).
+  --extend-falsy VALUE  Add VALUE to the falsy set, after any --falsy
+                        (repeatable).
 ```
 
 A few rules worth knowing:
@@ -281,7 +293,7 @@ doesn't stop the script.
 | `strict` | `bool \| None` | `None` | Raise on unrecognized values (`None` defers to `set_defaults()`). |
 | `warn` | `bool \| None` | `None` | Log a warning on unrecognized values (`None` defers to `set_defaults()`). |
 | `truthy` / `falsy` | `Iterable[str] \| None` | `None` | **Replace** the effective set. |
-| `extend_truthy` / `extend_falsy` | `Iterable[str] \| None` | `None` | **Extend** the effective set. |
+| `extend_truthy` / `extend_falsy` | `Iterable[str] \| None` | `None` | **Extend** the effective set, after any replacement. |
 
 `envbool()` also accepts `required` (`bool`, default `False`): when `True`, a
 variable that is unset raises `MissingEnvVarError` before `default` is applied. A

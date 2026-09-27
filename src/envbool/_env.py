@@ -43,8 +43,10 @@ def envbool(
             process-level defaults (set_defaults()) (default False).
         truthy: Replaces the effective truthy set.
         falsy: Replaces the effective falsy set.
-        extend_truthy: Extends the effective truthy set.
-        extend_falsy: Extends the effective falsy set.
+        extend_truthy: Extends the effective truthy set, after any truthy
+            replacement.
+        extend_falsy: Extends the effective falsy set, after any falsy
+            replacement.
 
     Returns:
         True if the env var value is in the truthy set, False otherwise.
