@@ -37,34 +37,34 @@ def _normalize_set(values: Iterable[str]) -> frozenset[str]:
     return frozenset(v.strip().lower() for v in values)
 
 
-def _apply_replace_or_extend(
+def _apply_replace_then_extend(
     base: frozenset[str],
     replace: Iterable[str] | None,
     extend: Iterable[str] | None,
 ) -> frozenset[str]:
-    """Resolve a value set using replace/extend/fall-back-to-base precedence.
+    """Resolve a value set: replace the base (if given), then extend the result.
 
     Shared by _resolve() (call-site truthy/falsy args, in _core.py) and
     set_defaults() (below) since both layer their inputs on top of a base set
-    using the same ruff select/extend-select pattern:
-        replace -- full replacement; caller owns the entire set
-        extend  -- additive; merges on top of base
+    using ruff's select/extend-select pattern:
+        replace -- swaps out base entirely; the caller owns the starting set
+        extend  -- additive; merged on top of whatever replace left
         neither -- use base as-is
-    replace takes precedence over extend; both cannot apply at once.
+    Passing both is replace-then-extend, as in ruff: neither argument is
+    silently dropped.
 
     Args:
-        base: The starting set to fall back to or extend.
+        base: The starting set, used when replace is None.
         replace: If not None, fully replaces base (normalized).
-        extend: If not None and replace is None, merged on top of base.
+        extend: If not None, merged on top of the (possibly replaced) set.
 
     Returns:
         The resolved, normalized frozenset.
     """
-    if replace is not None:
-        return _normalize_set(replace)
+    result = _normalize_set(replace) if replace is not None else base
     if extend is not None:
-        return base | _normalize_set(extend)
-    return base
+        result |= _normalize_set(extend)
+    return result
 
 
 @dataclass(frozen=True)
@@ -150,8 +150,8 @@ def set_defaults(
             built-in (False).
         truthy: Replaces the built-in truthy set.
         falsy: Replaces the built-in falsy set.
-        extend_truthy: Extends the built-in truthy set.
-        extend_falsy: Extends the built-in falsy set.
+        extend_truthy: Extends the truthy set (built-in, or truthy if given).
+        extend_falsy: Extends the falsy set (built-in, or falsy if given).
 
     Raises:
         TypeError: If strict/warn are not bool, or truthy/falsy/extend_truthy/
@@ -170,10 +170,10 @@ def set_defaults(
     new_defaults = Defaults(
         strict=strict if strict is not None else False,
         warn=warn if warn is not None else False,
-        effective_truthy=_apply_replace_or_extend(
+        effective_truthy=_apply_replace_then_extend(
             DEFAULT_TRUTHY, truthy, extend_truthy
         ),
-        effective_falsy=_apply_replace_or_extend(DEFAULT_FALSY, falsy, extend_falsy),
+        effective_falsy=_apply_replace_then_extend(DEFAULT_FALSY, falsy, extend_falsy),
     )
     with _cache.lock:
         _cache.value = new_defaults

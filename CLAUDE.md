@@ -20,7 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The project uses a `src/envbool/` layout with this module structure:
 
-- `_defaults.py` — Built-in truthy/falsy sets, shared set-resolution helpers (`_normalize_set`, `_apply_replace_or_extend`), and the process-level `Defaults` dataclass with `set_defaults()` / `get_defaults()` / `reset_defaults()`. A leaf module: no imports from elsewhere in envbool.
+- `_defaults.py` — Built-in truthy/falsy sets, shared set-resolution helpers (`_normalize_set`, `_apply_replace_then_extend`), and the process-level `Defaults` dataclass with `set_defaults()` / `get_defaults()` / `reset_defaults()`. A leaf module: no imports from elsewhere in envbool.
 - `_core.py` — Pure string coercion logic (`to_bool`, `_resolve`). No `os.environ` dependency.
 - `_env.py` — `envbool()` function: reads env vars, delegates to `_core.py`.
 - `exceptions.py` — `EnvBoolError` base, `InvalidBoolValueError(EnvBoolError, ValueError)`, `MissingEnvVarError(EnvBoolError, KeyError)`.
