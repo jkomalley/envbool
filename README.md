@@ -5,7 +5,7 @@
 **Coerce environment variables and strings into booleans — sensibly.**
 
 [![PyPI version](https://img.shields.io/pypi/v/envbool)](https://pypi.org/project/envbool/)
-[![Snap Store](https://img.shields.io/snapcraft/v/envbool/latest/stable?label=snap)](https://snapcraft.io/envbool)
+[![Snap Store](https://snapcraft.io/envbool/badge.svg)](https://snapcraft.io/envbool)
 [![Python versions](https://img.shields.io/pypi/pyversions/envbool)](https://pypi.org/project/envbool/)
 [![License: MIT](https://img.shields.io/github/license/jkomalley/envbool)](LICENSE)
 [![CI](https://github.com/jkomalley/envbool/actions/workflows/ci.yml/badge.svg)](https://github.com/jkomalley/envbool/actions/workflows/ci.yml)
