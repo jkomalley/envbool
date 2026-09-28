@@ -14,8 +14,7 @@ Exit codes:
   2  -- error (unrecognized value in strict mode, unset VAR_NAME with --required,
         bad arguments, multi-line stdin)
 
-Omitting --strict or --warn defers to the process-level defaults
-(envbool.set_defaults(); default: lenient, no warnings).
+Without --strict or --warn, coercion is lenient and emits no warnings.
 
 Value sets: --truthy/--falsy (repeatable) replace the truthy/falsy set;
 --extend-truthy/--extend-falsy (repeatable) add to it, after any
@@ -24,10 +23,6 @@ replacement.
 Public surface:
     main()  -- entry point registered as the "envbool" command
 """
-# --strict and --warn use default=None rather than False so an absent flag
-# passes None through to envbool()/to_bool(), which then defers to the
-# process-level defaults instead of overriding a set_defaults(strict=True)/
-# warn=True with False.
 
 __all__ = ["main"]
 
@@ -63,18 +58,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "--strict",
         "-s",
         action="store_true",
-        # None so an absent flag defers to the process-level defaults rather
-        # than overriding them with False.
-        # store_true with default=None gives: flag present -> True, absent -> None.
-        default=None,
         help="Raise error on unrecognized values.",
     )
     parser.add_argument(
         "--warn",
         action="store_true",
-        # None so an absent flag defers to the process-level defaults rather
-        # than overriding them with False.
-        default=None,
         help="Log a warning on unrecognized values.",
     )
     parser.add_argument(

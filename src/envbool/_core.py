@@ -1,34 +1,64 @@
 """Pure string-to-bool coercion with configurable truthy/falsy sets.
 
 Public surface:
-    DEFAULT_TRUTHY  -- the built-in truthy set (from _defaults)
-    DEFAULT_FALSY   -- the built-in falsy set (from _defaults)
+    DEFAULT_TRUTHY  -- the built-in truthy set
+    DEFAULT_FALSY   -- the built-in falsy set
     to_bool()       -- coerce a single string to bool
 
 Private surface (used by _env.py and tests):
-    _resolve()      -- compute effective truthy/falsy sets from layered inputs
+    _resolve()      -- compute effective truthy/falsy sets from call-site args
 """
-# This module has no knowledge of os.environ -- that lives in _env.py. It does
-# consult get_defaults() from _defaults.py so that strict=None/warn=None defer
-# to the process-level defaults (set_defaults()) rather than always defaulting
-# to False.
+# This module has no knowledge of os.environ -- that lives in _env.py. It also
+# holds no process-wide state: every setting comes from the call-site
+# arguments, so callers that want a fixed policy bind it with functools.partial.
 
 __all__ = ["to_bool"]
 
 import logging
 from collections.abc import Iterable
 
-from envbool._defaults import (
-    DEFAULT_FALSY,
-    DEFAULT_TRUTHY,
-    _apply_replace_then_extend,
-    get_defaults,
-)
 from envbool.exceptions import ConflictingValuesError, InvalidBoolValueError
 
 # Module-level logger -- attributed to "envbool._core" so callers can filter it
 # independently from "envbool.config" or the root "envbool" logger.
 _logger = logging.getLogger(__name__)
+
+DEFAULT_TRUTHY: frozenset[str] = frozenset({"true", "1", "yes", "on"})
+DEFAULT_FALSY: frozenset[str] = frozenset({"false", "0", "no", "off"})
+
+
+def _normalize_set(values: Iterable[str]) -> frozenset[str]:
+    """Strip and lowercase values so they match to_bool()'s normalized input."""
+    return frozenset(v.strip().lower() for v in values)
+
+
+def _apply_replace_then_extend(
+    base: frozenset[str],
+    replace: Iterable[str] | None,
+    extend: Iterable[str] | None,
+) -> frozenset[str]:
+    """Resolve a value set: replace the base (if given), then extend the result.
+
+    Used by _resolve() for each of the truthy and falsy sets:
+        replace -- swaps out base entirely; the caller owns the starting set
+        extend  -- additive; merged on top of whatever replace left
+        neither -- use base as-is
+    Passing both applies replace first, then extend, so neither argument is
+    silently dropped.
+
+    Args:
+        base: The starting set, used when replace is None.
+        replace: If not None, fully replaces base (normalized).
+        extend: If not None, merged on top of the (possibly replaced) set.
+
+    Returns:
+        The resolved, normalized frozenset.
+    """
+    result = _normalize_set(replace) if replace is not None else base
+    if extend is not None:
+        result |= _normalize_set(extend)
+    return result
+
 
 # Public API
 
@@ -37,8 +67,8 @@ def to_bool(
     value: str,
     *,
     default: bool = False,
-    strict: bool | None = None,
-    warn: bool | None = None,
+    strict: bool = False,
+    warn: bool = False,
     truthy: Iterable[str] | None = None,
     falsy: Iterable[str] | None = None,
     extend_truthy: Iterable[str] | None = None,
@@ -50,10 +80,8 @@ def to_bool(
     Args:
         value: The string to coerce.
         default: Returned when value is empty or unset.
-        strict: Raise on unrecognized values. None defers to process-level
-            defaults (set_defaults()) (default False).
-        warn: Log a warning on unrecognized values. None defers to
-            process-level defaults (set_defaults()) (default False).
+        strict: Raise on unrecognized values.
+        warn: Log a warning on unrecognized values.
         truthy: Replaces the effective truthy set.
         falsy: Replaces the effective falsy set.
         extend_truthy: Extends the effective truthy set, after any truthy
@@ -77,28 +105,14 @@ def to_bool(
     if not normalized:
         return default
 
-    # Read the process-level defaults (set once via set_defaults(), or the
-    # built-ins if never called). _resolve then applies the full three-level
-    # precedence chain:
-    #   hardcoded defaults (_defaults.py)
-    #   -> process-level defaults (effective_truthy/effective_falsy already
-    #      resolved there by set_defaults())
-    #   -> call-site args (truthy/extend_truthy/falsy/extend_falsy)
-    defaults = get_defaults()
+    # Precedence is two-level: the built-in sets, then the call-site args
+    # (truthy/extend_truthy/falsy/extend_falsy) layered on top by _resolve.
     effective_truthy, effective_falsy = _resolve(
-        config_truthy=defaults.effective_truthy,
-        config_falsy=defaults.effective_falsy,
         truthy=truthy,
         falsy=falsy,
         extend_truthy=extend_truthy,
         extend_falsy=extend_falsy,
     )
-
-    # Three-state logic: True/False at the call site override the process-level
-    # default; None defers to whatever set_defaults() last set (which defaults
-    # to False if set_defaults() was never called). Resolved before the lookup
-    # because the overlap check below also depends on it.
-    effective_strict = strict if strict is not None else defaults.strict
 
     # Overlapping sets are a configuration mistake. Strict mode promises every
     # accepted value is unambiguous, so it rejects the configuration outright --
@@ -107,7 +121,7 @@ def to_bool(
     # problem is visible, then lets truthy win to stay predictable.
     overlap = effective_truthy & effective_falsy
     if overlap:
-        if effective_strict:
+        if strict:
             err = ConflictingValuesError(
                 f"Truthy and falsy sets overlap: {', '.join(sorted(overlap))}"
             )
@@ -127,7 +141,7 @@ def to_bool(
     if normalized in effective_falsy:
         return False
 
-    if effective_strict:
+    if strict:
         truthy_list = ", ".join(sorted(effective_truthy))
         falsy_list = ", ".join(sorted(effective_falsy))
         # _var is threaded in by envbool() so the error message names the env
@@ -151,8 +165,7 @@ def to_bool(
         err.falsy = effective_falsy
         raise err
 
-    effective_warn = warn if warn is not None else defaults.warn
-    if effective_warn:
+    if warn:
         _logger.warning("Unrecognized boolean value: %r", normalized)
 
     # Lenient fallback: anything unrecognized is treated as falsy. This matches
@@ -165,8 +178,6 @@ def to_bool(
 
 def _resolve(
     *,
-    config_truthy: frozenset[str] = DEFAULT_TRUTHY,
-    config_falsy: frozenset[str] = DEFAULT_FALSY,
     truthy: Iterable[str] | None = None,
     falsy: Iterable[str] | None = None,
     extend_truthy: Iterable[str] | None = None,
@@ -174,7 +185,7 @@ def _resolve(
 ) -> tuple[frozenset[str], frozenset[str]]:
     # Replace-then-extend, per set -- see the _apply_replace_then_extend()
     # docstring for the full precedence rules.
-    effective_truthy = _apply_replace_then_extend(config_truthy, truthy, extend_truthy)
-    effective_falsy = _apply_replace_then_extend(config_falsy, falsy, extend_falsy)
+    effective_truthy = _apply_replace_then_extend(DEFAULT_TRUTHY, truthy, extend_truthy)
+    effective_falsy = _apply_replace_then_extend(DEFAULT_FALSY, falsy, extend_falsy)
 
     return (effective_truthy, effective_falsy)
