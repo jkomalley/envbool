@@ -194,9 +194,6 @@ class TestToBoolStrict:
         with pytest.raises(InvalidBoolValueError):
             to_bool("maybe", strict=True)
 
-    def test_unrecognized_strict_none_is_lenient(self):
-        assert to_bool("maybe", strict=None) is False
-
     def test_recognized_truthy_strict_does_not_raise(self):
         assert to_bool("true", strict=True) is True
 
@@ -249,9 +246,9 @@ class TestToBoolWarn:
             to_bool("maybe", warn=False)
         assert not caplog.records
 
-    def test_warn_none_no_warning(self, caplog):
+    def test_no_warning_by_default(self, caplog):
         with caplog.at_level(logging.WARNING, logger="envbool._core"):
-            to_bool("maybe", warn=None)
+            to_bool("maybe")
         assert not caplog.records
 
     def test_warn_not_emitted_for_recognized_value(self, caplog):

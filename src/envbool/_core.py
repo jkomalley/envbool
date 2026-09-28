@@ -10,9 +10,9 @@ Private surface (used by _env.py and tests):
 """
 # This module has no knowledge of os.environ -- that lives in _env.py. It also
 # holds no process-wide state: every setting comes from the call-site
-# arguments, so callers that want a fixed policy bind it with functools.partial.
+# arguments.
 
-__all__ = ["to_bool"]
+__all__ = ["DEFAULT_FALSY", "DEFAULT_TRUTHY", "to_bool"]
 
 import logging
 from collections.abc import Iterable
@@ -20,7 +20,7 @@ from collections.abc import Iterable
 from envbool.exceptions import ConflictingValuesError, InvalidBoolValueError
 
 # Module-level logger -- attributed to "envbool._core" so callers can filter it
-# independently from "envbool.config" or the root "envbool" logger.
+# independently from the root "envbool" logger.
 _logger = logging.getLogger(__name__)
 
 DEFAULT_TRUTHY: frozenset[str] = frozenset({"true", "1", "yes", "on"})
