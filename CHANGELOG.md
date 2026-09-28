@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Breaking:** `set_defaults()`, `get_defaults()`, `reset_defaults()`, and
+  `Defaults` are removed; envbool no longer has process-wide state. To
+  configure once, bind options with `functools.partial(envbool, strict=True,
+  ...)`. `strict` and `warn` no longer accept `None` (#82).
+
 ## [0.5.0] - 2026-09-27
 
 ### Added
