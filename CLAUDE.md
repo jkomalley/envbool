@@ -30,7 +30,7 @@ The project uses a `src/envbool/` layout with this module structure:
 Key design patterns:
 - **Lenient by default**, strict mode opt-in. In lenient mode, anything not in the truthy set returns `False`.
 - **Value set resolution**: built-in sets → function arguments. `truthy` replaces, `extend_truthy` extends on top of the (possibly replaced) set.
-- **No process-wide state**: configuration is call-site arguments only; callers bind a policy with `functools.partial`. No disk I/O anywhere in the library.
+- **No process-wide state**: configuration is call-site arguments only. No disk I/O anywhere in the library.
 - **Return type is always `bool`** — no `None` returns.
 
 ## Workflow

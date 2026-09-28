@@ -40,8 +40,6 @@ CACHE = envbool("CACHE")
 - **Always returns `bool`.** No `None`, no surprises in your type signatures.
 - **Customizable value sets.** Replace or extend the truthy/falsy words your
   environment uses.
-- **Configure once, no global state.** Bind your policy with
-  `functools.partial` instead of repeating options at every call site.
 - **A CLI for shell scripts.** Exit codes map to truthiness, so it drops
   straight into `&&` / `||` chains.
 - **Zero ceremony.** Zero dependencies, fully typed, Python 3.11+.
@@ -126,8 +124,9 @@ LOCALE = envbool("USE_METRIC", truthy={"metric"}, falsy={"imperial"})
 ```
 
 Each set is built in order: start from the built-in set, swap it out if
-`truthy`/`falsy` is given, then add anything in `extend_truthy`/`extend_falsy`. Passing both
-`truthy` and `extend_truthy` therefore gives you exactly their union:
+`truthy`/`falsy` is given, then add anything in `extend_truthy`/
+`extend_falsy`. Passing both `truthy` and `extend_truthy` therefore gives you
+exactly their union:
 
 ```python
 to_bool("y", truthy={"yes"}, extend_truthy={"y"})  # True
@@ -147,41 +146,17 @@ to_bool("0")  # False
 to_bool("maybe", strict=True)  # raises InvalidBoolValueError
 ```
 
-### Configuring once
-
-envbool has no global settings: every call is configured by its own
-arguments. To set a policy once instead of repeating `strict=`/`extend_truthy=`
-at every call site, bind it with `functools.partial`:
-
-```python
-from functools import partial
-
-import envbool
-
-flag = partial(envbool.envbool, strict=True, extend_truthy=["enabled"])
-
-flag("DEBUG")  # raises on unrecognized values
-flag("USE_CACHE", default=True)  # per-call options still apply
-flag("LEGACY_MODE", strict=False)  # and override the bound ones
-```
-
-Each partial is independent, so a library and the application using it (or
-two components of one application) can each have their own policy without
-affecting the other.
-
 ### Loading application settings
 
 In a real application, read every flag once at startup into a single settings
-object, with the policy set up front. With strict mode on, a typo like
+object. With strict mode on, a typo like
 `DEBUG=ture` stops startup instead of quietly reading as `False`:
 
 ```python
 import sys
 from dataclasses import dataclass
-from functools import partial
 
-import envbool
-from envbool import EnvBoolError
+from envbool import EnvBoolError, envbool
 
 
 @dataclass(frozen=True)
@@ -193,17 +168,11 @@ class Settings:
 
 
 def load_settings() -> Settings:
-    flag = partial(
-        envbool.envbool,
-        strict=True,
-        extend_truthy=["enabled"],
-        extend_falsy=["disabled"],
-    )
     return Settings(
-        debug=flag("DEBUG"),  # off unless set
-        use_cache=flag("USE_CACHE", default=True),  # on unless set
-        new_checkout=flag("FEATURE_NEW_CHECKOUT"),
-        send_emails=flag("SEND_EMAILS", required=True),  # must be set
+        debug=envbool("DEBUG", strict=True),  # off unless set
+        use_cache=envbool("USE_CACHE", default=True, strict=True),  # on unless set
+        new_checkout=envbool("FEATURE_NEW_CHECKOUT", strict=True),
+        send_emails=envbool("SEND_EMAILS", required=True, strict=True),  # must be set
     )
 
 
