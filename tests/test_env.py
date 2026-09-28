@@ -4,7 +4,7 @@ import logging
 
 import pytest
 
-from envbool._defaults import DEFAULT_FALSY, DEFAULT_TRUTHY
+from envbool import DEFAULT_FALSY, DEFAULT_TRUTHY
 from envbool._env import envbool
 from envbool.exceptions import InvalidBoolValueError, MissingEnvVarError
 
@@ -142,9 +142,9 @@ class TestEnvBoolStrict:
             envbool("DEBUG", strict=True)
         assert "DEBUG" in str(exc_info.value)
 
-    def test_strict_none_defaults_to_lenient(self, monkeypatch):
+    def test_lenient_by_default(self, monkeypatch):
         monkeypatch.setenv("TEST_VAR", "maybe")
-        assert envbool("TEST_VAR", strict=None) is False
+        assert envbool("TEST_VAR") is False
 
     def test_recognized_truthy_does_not_raise_in_strict(self, monkeypatch):
         monkeypatch.setenv("TEST_VAR", "true")

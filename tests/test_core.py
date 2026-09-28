@@ -1,11 +1,10 @@
-"""Tests for core.py: DEFAULT_TRUTHY, DEFAULT_FALSY, _resolve, and to_bool."""
+"""Tests for _core.py: DEFAULT_TRUTHY, DEFAULT_FALSY, _resolve, and to_bool."""
 
 import logging
 
 import pytest
 
 from envbool._core import DEFAULT_FALSY, DEFAULT_TRUTHY, _resolve, to_bool
-from envbool._defaults import set_defaults
 from envbool.exceptions import (
     ConflictingValuesError,
     EnvBoolError,
@@ -36,18 +35,6 @@ class TestResolveDefaults:
         assert t == DEFAULT_TRUTHY
         assert f == DEFAULT_FALSY
 
-    def test_config_truthy_used_when_no_arg_override(self):
-        custom = frozenset({"si", "oui"})
-        t, f = _resolve(config_truthy=custom)
-        assert t == custom
-        assert f == DEFAULT_FALSY
-
-    def test_config_falsy_used_when_no_arg_override(self):
-        custom = frozenset({"nope", "nein"})
-        t, f = _resolve(config_falsy=custom)
-        assert t == DEFAULT_TRUTHY
-        assert f == custom
-
     def test_return_type_is_frozenset_pair(self):
         result = _resolve()
         assert isinstance(result, tuple)
@@ -57,7 +44,7 @@ class TestResolveDefaults:
 
 
 class TestResolveTruthy:
-    def test_truthy_replaces_config_truthy(self):
+    def test_truthy_replaces_set_exactly(self):
         t, _ = _resolve(truthy=["si"])
         assert t == frozenset({"si"})
 
@@ -70,15 +57,10 @@ class TestResolveTruthy:
         t, _ = _resolve(truthy=set())
         assert t == frozenset()
 
-    def test_extend_truthy_adds_to_config_truthy(self):
+    def test_extend_truthy_adds_to_default_truthy(self):
         t, _ = _resolve(extend_truthy=["enabled"])
         assert "enabled" in t
         assert DEFAULT_TRUTHY.issubset(t)
-
-    def test_extend_truthy_adds_to_custom_config_truthy(self):
-        config = frozenset({"si"})
-        t, _ = _resolve(config_truthy=config, extend_truthy=["ja"])
-        assert t == frozenset({"si", "ja"})
 
     def test_extend_truthy_applies_on_top_of_truthy(self):
         t, _ = _resolve(truthy=["only"], extend_truthy=["also"])
@@ -110,7 +92,7 @@ class TestResolveTruthy:
 
 
 class TestResolveFalsy:
-    def test_falsy_replaces_config_falsy(self):
+    def test_falsy_replaces_set_exactly(self):
         _, f = _resolve(falsy=["nope"])
         assert f == frozenset({"nope"})
 
@@ -123,15 +105,10 @@ class TestResolveFalsy:
         _, f = _resolve(falsy=set())
         assert f == frozenset()
 
-    def test_extend_falsy_adds_to_config_falsy(self):
+    def test_extend_falsy_adds_to_default_falsy(self):
         _, f = _resolve(extend_falsy=["disabled"])
         assert "disabled" in f
         assert DEFAULT_FALSY.issubset(f)
-
-    def test_extend_falsy_adds_to_custom_config_falsy(self):
-        config = frozenset({"nein"})
-        _, f = _resolve(config_falsy=config, extend_falsy=["nope"])
-        assert f == frozenset({"nein", "nope"})
 
     def test_extend_falsy_applies_on_top_of_falsy(self):
         _, f = _resolve(falsy=["only"], extend_falsy=["also"])
@@ -217,9 +194,6 @@ class TestToBoolStrict:
         with pytest.raises(InvalidBoolValueError):
             to_bool("maybe", strict=True)
 
-    def test_unrecognized_strict_none_is_lenient(self):
-        assert to_bool("maybe", strict=None) is False
-
     def test_recognized_truthy_strict_does_not_raise(self):
         assert to_bool("true", strict=True) is True
 
@@ -272,9 +246,9 @@ class TestToBoolWarn:
             to_bool("maybe", warn=False)
         assert not caplog.records
 
-    def test_warn_none_no_warning(self, caplog):
+    def test_no_warning_by_default(self, caplog):
         with caplog.at_level(logging.WARNING, logger="envbool._core"):
-            to_bool("maybe", warn=None)
+            to_bool("maybe")
         assert not caplog.records
 
     def test_warn_not_emitted_for_recognized_value(self, caplog):
@@ -360,15 +334,6 @@ class TestToBoolOverlap:
         ):
             to_bool("true", truthy=["true"], falsy=["true"], strict=True)
         assert not caplog.records
-
-    def test_strict_from_defaults_overlap_raises(self):
-        set_defaults(strict=True, extend_falsy=["on"])
-        with pytest.raises(ConflictingValuesError):
-            to_bool("yes")
-
-    def test_strict_false_overrides_defaults_on_overlap(self):
-        set_defaults(strict=True, extend_falsy=["on"])
-        assert to_bool("on", strict=False) is True
 
     def test_strict_overlap_empty_value_returns_default(self):
         # Empty values short-circuit before set resolution, as before.

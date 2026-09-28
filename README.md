@@ -40,8 +40,6 @@ CACHE = envbool("CACHE")
 - **Always returns `bool`.** No `None`, no surprises in your type signatures.
 - **Customizable value sets.** Replace or extend the truthy/falsy words your
   environment uses.
-- **Process-level defaults.** Call `set_defaults()` once at startup instead
-  of threading options through every call site.
 - **A CLI for shell scripts.** Exit codes map to truthiness, so it drops
   straight into `&&` / `||` chains.
 - **Zero ceremony.** Zero dependencies, fully typed, Python 3.11+.
@@ -125,10 +123,10 @@ FEATURE = envbool("FEATURE_FLAG", extend_truthy={"enabled", "y"})
 LOCALE = envbool("USE_METRIC", truthy={"metric"}, falsy={"imperial"})
 ```
 
-Each set is built in order: start from the base set (the built-ins, or
-whatever `set_defaults()` configured), swap it out if `truthy`/`falsy` is
-given, then add anything in `extend_truthy`/`extend_falsy`. Passing both
-`truthy` and `extend_truthy` therefore gives you exactly their union:
+Each set is built in order: start from the built-in set, swap it out if
+`truthy`/`falsy` is given, then add anything in `extend_truthy`/
+`extend_falsy`. Passing both `truthy` and `extend_truthy` therefore gives you
+exactly their union:
 
 ```python
 to_bool("y", truthy={"yes"}, extend_truthy={"y"})  # True
@@ -148,45 +146,17 @@ to_bool("0")  # False
 to_bool("maybe", strict=True)  # raises InvalidBoolValueError
 ```
 
-### Process-level defaults
-
-Set policy once at startup instead of threading `strict=`/`extend_truthy=`
-through every call site:
-
-```python
-import envbool
-
-envbool.set_defaults(strict=True, extend_truthy=["enabled"])
-
-envbool.envbool("DEBUG")  # now raises on unrecognized values by default
-```
-
-`set_defaults()` replaces the process-level defaults **from the built-ins**,
-not from whatever a previous `set_defaults()` call left in place — call it
-once. Call-site arguments (`envbool("X", strict=False)`) still override
-whatever `set_defaults()` configured:
-
-```
-built-in defaults  →  set_defaults()  →  function arguments / CLI flags
-```
-
-`get_defaults()` returns the active `Defaults` (a frozen dataclass: `strict`,
-`warn`, `effective_truthy`, `effective_falsy`) for inspection.
-`reset_defaults()` restores the built-ins — call it in a test fixture (see
-[Testing code that uses envbool](#testing-code-that-uses-envbool)).
-
 ### Loading application settings
 
 In a real application, read every flag once at startup into a single settings
-object, with the policy set up front. With strict mode on, a typo like
+object. With strict mode on, a typo like
 `DEBUG=ture` stops startup instead of quietly reading as `False`:
 
 ```python
 import sys
 from dataclasses import dataclass
 
-import envbool
-from envbool import EnvBoolError
+from envbool import EnvBoolError, envbool
 
 
 @dataclass(frozen=True)
@@ -198,16 +168,11 @@ class Settings:
 
 
 def load_settings() -> Settings:
-    envbool.set_defaults(
-        strict=True,
-        extend_truthy=["enabled"],
-        extend_falsy=["disabled"],
-    )
     return Settings(
-        debug=envbool.envbool("DEBUG"),  # off unless set
-        use_cache=envbool.envbool("USE_CACHE", default=True),  # on unless set
-        new_checkout=envbool.envbool("FEATURE_NEW_CHECKOUT"),
-        send_emails=envbool.envbool("SEND_EMAILS", required=True),  # must be set
+        debug=envbool("DEBUG", strict=True),  # off unless set
+        use_cache=envbool("USE_CACHE", default=True, strict=True),  # on unless set
+        new_checkout=envbool("FEATURE_NEW_CHECKOUT", strict=True),
+        send_emails=envbool("SEND_EMAILS", required=True, strict=True),  # must be set
     )
 
 
@@ -220,10 +185,6 @@ except EnvBoolError as e:
 Catching `EnvBoolError` covers every failure: a bad value, a missing
 `required` variable, or overlapping value sets. The rest of the application
 reads `SETTINGS.debug` and never touches `os.environ` again.
-
-> Through 0.3.x, envbool read TOML config files (`envbool.toml`,
-> `[tool.envbool]`). 0.4.0 removed them in favor of `set_defaults()` — see
-> `CHANGELOG.md` for the rationale and migration note.
 
 ## Command-line interface
 
@@ -279,9 +240,7 @@ options:
 
 A few rules worth knowing:
 
-- Omitting `--strict` / `--warn` uses the built-in defaults (lenient, no
-  warnings). `set_defaults()` is a library-level concern — the one-shot CLI
-  process doesn't read it.
+- Without `--strict` / `--warn`, coercion is lenient and logs no warnings.
 - `VAR_NAME` and `--value` are mutually exclusive.
 - `--required` only applies to `VAR_NAME`; combining it with `--value` or
   giving it no `VAR_NAME` at all is a usage error.
@@ -317,10 +276,6 @@ doesn't stop the script.
 | --- | --- |
 | `envbool(var, **opts)` | Read an environment variable and return `bool`. |
 | `to_bool(value, **opts)` | Coerce a string to `bool`. |
-| `set_defaults(**opts)` | Set process-level strict/warn/truthy/falsy defaults, replacing the built-ins. |
-| `get_defaults()` | Return the active `Defaults`. |
-| `reset_defaults()` | Restore built-in defaults. |
-| `Defaults` | Frozen dataclass: `strict`, `warn`, `effective_truthy`, `effective_falsy`. |
 | `DEFAULT_TRUTHY` | `frozenset` of the built-in truthy strings. |
 | `DEFAULT_FALSY` | `frozenset` of the built-in falsy strings. |
 | `EnvBoolError` | Base class for every exception the library raises. |
@@ -333,8 +288,8 @@ doesn't stop the script.
 | Option | Type | Default | Meaning |
 | --- | --- | --- | --- |
 | `default` | `bool` | `False` | Returned for unset/empty input. |
-| `strict` | `bool \| None` | `None` | Raise on unrecognized values (`None` defers to `set_defaults()`). |
-| `warn` | `bool \| None` | `None` | Log a warning on unrecognized values (`None` defers to `set_defaults()`). |
+| `strict` | `bool` | `False` | Raise on unrecognized values. |
+| `warn` | `bool` | `False` | Log a warning on unrecognized values. |
 | `truthy` / `falsy` | `Iterable[str] \| None` | `None` | **Replace** the effective set. |
 | `extend_truthy` / `extend_falsy` | `Iterable[str] \| None` | `None` | **Extend** the effective set, after any replacement. |
 
@@ -404,23 +359,6 @@ if "MY_VAR" not in os.environ:
     ...  # truly unset — handle the "not configured" case
 else:
     result = envbool("MY_VAR")
-```
-
-### Testing code that uses envbool
-
-If your tests call `set_defaults()`, reset it between tests with an autouse
-fixture so overrides don't leak across the suite:
-
-```python
-# conftest.py
-import pytest
-from envbool import reset_defaults
-
-
-@pytest.fixture(autouse=True)
-def _reset_envbool_defaults():
-    yield
-    reset_defaults()
 ```
 
 ## Contributing

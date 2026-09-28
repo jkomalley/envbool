@@ -34,9 +34,8 @@ responsibility:
 
 | Module | Responsibility |
 | --- | --- |
-| `_core.py` | Pure string-to-bool coercion (`to_bool`) and value-set resolution. No `os.environ` access. |
+| `_core.py` | Pure string-to-bool coercion (`to_bool`), the built-in `DEFAULT_TRUTHY` / `DEFAULT_FALSY` sets, and value-set resolution. No `os.environ` access. |
 | `_env.py` | `envbool()` — reads the environment, then delegates to `_core`. |
-| `_defaults.py` | The built-in `DEFAULT_TRUTHY` / `DEFAULT_FALSY` sets, shared set-resolution helpers, and the process-level defaults behind `set_defaults()` / `get_defaults()` / `reset_defaults()`. |
 | `_cli.py` | The `envbool` command-line entry point. |
 | `exceptions.py` | The `EnvBoolError` exception hierarchy. |
 | `__init__.py` | The public API surface (re-exports). |
@@ -84,9 +83,6 @@ you'd rather not install `just`.
   `just test-cov`.
 - `to_bool()` tests must not touch `os.environ`; use `monkeypatch.setenv` /
   `delenv` in `envbool()` tests instead.
-- Every test ends with clean process-level defaults — the autouse
-  `_reset_envbool_defaults` fixture in `conftest.py` calls `reset_defaults()`
-  for you.
 
 ## Pull requests
 
