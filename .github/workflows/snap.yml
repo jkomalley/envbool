@@ -27,7 +27,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: canonical/craft-actions/snapcraft/pack@v0.1.1
+      - uses: canonical/craft-actions/snapcraft/pack@v1.0.0
         id: snapcraft
 
       - name: Test installed snap
