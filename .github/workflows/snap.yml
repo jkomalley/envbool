@@ -27,12 +27,12 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: canonical/craft-actions/snapcraft/pack@v0.1.1
+      - uses: canonical/craft-actions/snapcraft/pack@v1.0.0
         id: snapcraft
 
       - name: Test installed snap
         run: |
-          sudo snap install --dangerous ${{ steps.snapcraft.outputs.snap }}
+          sudo snap install --dangerous ${{ steps.snapcraft.outputs.snaps }}
           test "$(/snap/bin/envbool --print --value yes)" = true
           test "$(/snap/bin/envbool --print --value no)" = false
           test "$(DEBUG=on /snap/bin/envbool --print DEBUG)" = true
@@ -41,8 +41,8 @@ jobs:
       # dead weight at runtime and must not creep back into the snap.
       - name: Check snap excludes build tooling
         run: |
-          ls -lh ${{ steps.snapcraft.outputs.snap }}
-          if unsquashfs -l ${{ steps.snapcraft.outputs.snap }} \
+          ls -lh ${{ steps.snapcraft.outputs.snaps }}
+          if unsquashfs -l ${{ steps.snapcraft.outputs.snaps }} \
               | grep -E "site-packages/(pip|setuptools|wheel|packaging)(/|-)|bin/(pip|wheel|activate)"; then
             echo "::error::build tooling found in snap"
             exit 1
@@ -51,4 +51,4 @@ jobs:
       - uses: actions/upload-artifact@v7.0.2
         with:
           name: envbool-${{ runner.arch }}
-          path: ${{ steps.snapcraft.outputs.snap }}
+          path: ${{ steps.snapcraft.outputs.snaps }}
